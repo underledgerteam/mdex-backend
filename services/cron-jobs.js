@@ -1,6 +1,6 @@
 const cron = require("node-cron");
 const ethers = require("ethers");
-const ABI = require("../configs/multisig-abi.json");
+const ABI = require("../abis/multisig-abi.json");
 require("dotenv").config();
 
 const { PRIVATE_KEY, JOB_SCHEDULE } = process.env;
