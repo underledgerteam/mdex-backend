@@ -1,0 +1,11 @@
+#### Start App
+#####  Install dependencies
+`$ npm install`
+
+####
+`$ node index.js`
+
+#### Example Endpoint
+`[GET] test endpoint - http://localhost:9000/api/v1/swap/`
+
+`[GET] get pair - http://localhost:9000/api/v1/swap/getpair/`
