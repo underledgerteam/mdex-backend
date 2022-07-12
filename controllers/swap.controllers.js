@@ -1,16 +1,24 @@
+const { getPriceImpact, getRoute } = require('../services/swap.service');
 const Service = require('../services/swap.service');
 
 const methods = {
-    // http://localhost:5000/api/v1/swap/getpair?token0=&token1=
-    async getPair(req, res) {
+    async qoute(req, res) {
+        let tokenIn = req.query.tokenIn;
+        let tokenOut = req.query.tokenOut;
+        let amount = req.query.amount;
+        let chainId = req.query.chainId;
+
         try {
-            let result = await Service.getPair(
-                req.params.token0,
-                req.params.token1
-            )
-            res.success(result)
+            let result = await Service.qoute(
+                tokenIn,
+                tokenOut,
+                amount,
+                chainId
+            );
+            
+            res.success(result);
         } catch (error) {
-            res.error(error)
+            res.error(error);
         }
     },
 
