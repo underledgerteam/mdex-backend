@@ -1,11 +1,12 @@
-#### Start App
-#####  Install dependencies
+### Start App
+####  Install dependencies
 `$ npm install`
 
-####
-`$ node index.js`
+#### Run
+`$ node index.js` or  `$ nodemon .`
 
-#### Example Endpoint
+
+### Example Endpoint
 `[GET] test endpoint - http://localhost:9000/api/v1/swap/`
 
-`[GET] get pair - http://localhost:9000/api/v1/swap/getpair/`
+`[GET] find route - http://localhost:9000/api/v1/swap/qoute?tokenIn=&tokenOut=&amount=&chainId=`
