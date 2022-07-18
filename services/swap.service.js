@@ -1,10 +1,16 @@
-// const Web3 = require('web3');
+require("dotenv").config();
+
 const ethers = require("ethers");
+const assert = require("assert");
 
-const appConfig = require('../configs/app');
-const web3Config = require('../configs/web3');
-
-const uniswapConfig = require('../configs/amm-uniswap');
+const { PRIVATE_KEY } = process.env;
+const {
+  DISTRIBUTION_PERCENT,
+  MAX_ROUTE,
+  ROUTES,
+  SWAP_FEE,
+  ROUTING_CONTRACTS
+} = require("../utils/constants");
 
 const methods = {
   signedWallet(chainId) {
@@ -12,93 +18,123 @@ const methods = {
       try {
         const network = ethers.providers.getNetwork(parseInt(chainId));
         const provider = ethers.getDefaultProvider(network);
-        const wallet = new ethers.Wallet(web3Config.privateKey, provider);
+        const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-        resolve(wallet); 
+        resolve(wallet);
       } catch (error) {
         reject(error);
       }
     });
   },
 
-  calculatePriceImpact(amount, reserveToken) {
-    return  amount / (reserveToken + amount);
+  getServiceFee(amount) {
+    return (amount * SWAP_FEE) / 100;
   },
 
-  getAllRoutes(tokenIn, tokenOut, chainId) {
+  _getOneRoute(data) {
+    [indexRoute, amountOutRoute] = data;
+    return [indexRoute.toNumber(), amountOutRoute.toNumber()]
+  },
+
+  _getSplitRoutes(data) {
+    [indexRotes, volumeRoute, amountOut] = data;
+
+    amountOut = amountOut.toNumber();
+
+    for (i = 0; i < indexRotes.length; i++) {
+      indexRotes[i] = indexRotes[i].toNumber();
+      volumeRoute[i] = volumeRoute[i].toNumber();
+    }
+
+    return [indexRotes, volumeRoute, amountOut]
+  },
+
+  getBestRate(tokenIn, tokenOut, amount, chainId) {
     return new Promise(async (resolve, reject) => {
       try {
-        let routes = [];
+        let data = {};
+        let isSplitSwap = false;
 
         const wallet = await this.signedWallet(chainId);
+        
+        const routingConfig = ROUTING_CONTRACTS[chainId];
+        const serviceFee = await this.getServiceFee(amount);
 
-        const factoryContract = new ethers.Contract(
-          uniswapConfig.rinkebyUniswapFactoryContract,
-          uniswapConfig.uniswapFactoryABI,
-          wallet
-        );
+        const netAmount = amount - serviceFee;
+
+        const queryContract = new ethers.Contract(
+          routingConfig.AddressBestRouteQuery, routingConfig.ABIBestRouteQuery, wallet);
+
+        const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, netAmount, ROUTES);
+        const splitRoutes = await queryContract.splitTwoRoutes(tokenIn, tokenOut,
+          netAmount, ROUTES, DISTRIBUTION_PERCENT);
+        
+        const [indexOneRoute, amountOutOneRoute] = await this._getOneRoute(oneRoute);
+        const [
+          indexSplitRoute,
+          volumesSplitRoute,
+          amountOutsplitRoute
+        ] = await this._getSplitRoutes(splitRoutes);
+
+        if (amountOutOneRoute < amountOutsplitRoute) {
+          isSplitSwap = true;
+        }
+
+        data["fee"] = serviceFee;
+        data["isSplitSwap"] = isSplitSwap;
+
+        if (isSplitSwap) {
+            data["route"] = indexSplitRoute;
+            data["amount"] = volumesSplitRoute;
+        } else {
+          data["route"] = indexOneRoute;
+          data["amount"] = amountOutOneRoute;
+        }
     
-        const uniswapPossibleRoute = await factoryContract.getPair(tokenIn, tokenOut);
-        routes.push(uniswapPossibleRoute);
-        
-        resolve(routes);
+        resolve(data);
       } catch (error) {
         reject(error);
       }
     });
   },
 
-  qoute(tokenIn, tokenOut, amountIn, chainId) {
+  swap(tokenIn, tokenOut, chainId, isSplitSwap, tradingAmount, tradingRouteIndex) {
     return new Promise(async (resolve, reject) => {
       try {
-        let allQoutes = {};
+        // validate input
+        if (isSplitSwap) {
+          assert(tradingAmount.length == MAX_ROUTE, "Trading amounts invalid length");
+          assert(tradingRouteIndex.length == MAX_ROUTE, "Trading routes index invalid length");
+        } else {
+          assert(tradingAmount.length == 1, "Trading amounts can have only 1 length");
+          assert(tradingAmount.length == 1, "Trading routes index can have only 1 length");
+        }
 
         const wallet = await this.signedWallet(chainId);
-        const possibleRoutes = await this.getAllRoutes(tokenIn, tokenOut, chainId);
+        const routingConfig = ROUTING_CONTRACTS[chainId];
 
-        // prepare router contract
-        const routerContract = new ethers.Contract(
-          uniswapConfig.rinkebyUniswapRouterContract,
-          uniswapConfig.uniswapRouteABI,
-          wallet
-        );
-        
-        for (let i = 0; i < possibleRoutes.length; i++) {
-          const pairAddress = possibleRoutes[i];
+        const controllerContract = new ethers.Contract(routingConfig.AddressController,
+          routingConfig.ABIController, wallet);
 
-          const pairContract = new ethers.Contract(pairAddress, uniswapConfig.uniswapPairABI, wallet);
-          const [reserveToken0, reserveToken1] = await pairContract.getReserves();
-
-          // const priceImpact = await this.calculatePriceImpact(amountIn, reserveToken0.toNumber());
-          const amountOut = await routerContract.getAmountOut(amountIn, reserveToken0, reserveToken1);
-
-          allQoutes[pairAddress] = amountOut;
+        if (!isSplitSwap) {
+          await controllerContract.swap(tokenIn, tokenOut, tradingAmount[0], tradingRouteIndex[0]);
+        } else {
+          await controllerContract.spiltSwap(
+            tokenIn,
+            tokenOut,
+            amount,
+            tradingRouteIndex,
+            tradingAmount
+          );
         }
 
-        // order by amountOut ASC
-        const sortQoutes = Object.fromEntries(
-          Object.entries(allQoutes).sort(([, a], [, b]) => a - b)
-        );
-
-        pairAddress = Object.keys(sortQoutes)[0];
-        amountOut = Object.values(sortQoutes)[0].toNumber();
-
-        var data = {
-          tokenIn: tokenIn,
-          tokenInAmount: amountIn,
-          tokenOut: tokenOut,
-          tokenOutAmount: amountOut,
-          routes: [
-            [pairAddress, amountOut]
-          ]
-        }
-
-        resolve(JSON.stringify(data));    
+        resolve();
       } catch (error) {
         reject(error);
       }
     });
   }
+
 }
 
 module.exports = { ...methods }
