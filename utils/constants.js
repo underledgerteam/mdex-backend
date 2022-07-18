@@ -7,6 +7,11 @@ module.exports = {
 	SWAP_FEE: 1,
 	ROUTES: [0, 1],
 
+	ROUTING_NAME: {
+		0: "Uniswap",
+		1: "Curve Fi."
+	},
+
 	ROUTING_CONTRACTS: {
 		4: {
 			Lable: "Rinkeby Testnet Network",

@@ -9,6 +9,7 @@ const {
   MAX_ROUTE,
   ROUTES,
   SWAP_FEE,
+  ROUTING_NAME,
   ROUTING_CONTRACTS
 } = require("../utils/constants");
 
@@ -33,20 +34,32 @@ const methods = {
 
   _getOneRoute(data) {
     [indexRoute, amountOutRoute] = data;
-    return [indexRoute.toNumber(), amountOutRoute.toNumber()]
+
+    oneRouteIndex = {};
+    index = indexRoute.toNumber()
+
+    oneRouteIndex["index"] = index;
+    oneRouteIndex["name"] = ROUTING_NAME[index];
+
+    return [[oneRouteIndex], amountOutRoute.toNumber()]
   },
 
   _getSplitRoutes(data) {
     [indexRotes, volumeRoute, amountOut] = data;
+    
+    splitRouteIndex = [];
+    splitRouteVolume = [];
 
     amountOut = amountOut.toNumber();
 
     for (i = 0; i < indexRotes.length; i++) {
-      indexRotes[i] = indexRotes[i].toNumber();
-      volumeRoute[i] = volumeRoute[i].toNumber();
+      index = indexRotes[i].toNumber();
+
+      splitRouteVolume.push(volumeRoute[i].toNumber());
+      splitRouteIndex.push({"index": index, "name": ROUTING_NAME[index]});
     }
 
-    return [indexRotes, volumeRoute, amountOut]
+    return [splitRouteIndex, splitRouteVolume, amountOut]
   },
 
   getBestRate(tokenIn, tokenOut, amount, chainId) {
