@@ -6,7 +6,9 @@
 `$ node index.js` or  `$ nodemon .`
 
 
-### Example Endpoint
-`[GET] test endpoint - http://localhost:9000/api/v1/swap/`
+### Endpoint
+[GET] Find best rate
+```
+/api/rate?tokenIn=&tokenOut=&amount=&chainId=
+```
 
-`[GET] find route - http://localhost:9000/api/v1/swap/qoute?tokenIn=&tokenOut=&amount=&chainId=`

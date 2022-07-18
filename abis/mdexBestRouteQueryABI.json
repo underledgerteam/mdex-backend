@@ -1,0 +1,114 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "contract IMdexController",
+				"name": "_mdex",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "mdex",
+		"outputs": [
+			{
+				"internalType": "contract IMdexController",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "tokenIn",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "tokenOut",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "routes",
+				"type": "uint256[]"
+			}
+		],
+		"name": "oneRoute",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "routeIndex",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "tokenIn",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "tokenOut",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "routes",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "percentStep",
+				"type": "uint256"
+			}
+		],
+		"name": "splitTwoRoutes",
+		"outputs": [
+			{
+				"internalType": "uint256[2]",
+				"name": "routeIndexs",
+				"type": "uint256[2]"
+			},
+			{
+				"internalType": "uint256[2]",
+				"name": "volumns",
+				"type": "uint256[2]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountOut",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
