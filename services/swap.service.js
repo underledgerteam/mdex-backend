@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const ethers = require("ethers");
 const assert = require("assert");
+const BigNumber = require('bignumber.js');
 
 const { PRIVATE_KEY } = process.env;
 const {
@@ -41,7 +42,7 @@ const methods = {
     oneRouteIndex["index"] = index;
     oneRouteIndex["name"] = ROUTING_NAME[index];
 
-    return [[oneRouteIndex], amountOutRoute.toNumber()]
+    return [[oneRouteIndex], amountOutRoute.toString()]
   },
 
   _getSplitRoutes(data) {
@@ -50,12 +51,12 @@ const methods = {
     splitRouteIndex = [];
     splitRouteVolume = [];
 
-    amountOut = amountOut.toNumber();
+    amountOut = amountOut.toString();
 
     for (i = 0; i < indexRotes.length; i++) {
-      index = indexRotes[i].toNumber();
+      index = indexRotes[i].toString();
 
-      splitRouteVolume.push(volumeRoute[i].toNumber());
+      splitRouteVolume.push(volumeRoute[i].toString());
       splitRouteIndex.push({"index": index, "name": ROUTING_NAME[index]});
     }
 
@@ -72,15 +73,15 @@ const methods = {
         
         const routingConfig = ROUTING_CONTRACTS[chainId];
         const serviceFee = await this.getServiceFee(amount);
-
-        const netAmount = amount - serviceFee;
+        
+        const netAmount = new BigNumber(amount - serviceFee);
 
         const queryContract = new ethers.Contract(
           routingConfig.AddressBestRouteQuery, routingConfig.ABIBestRouteQuery, wallet);
 
-        const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, netAmount, ROUTES);
+        const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, netAmount.toFixed(), ROUTES);
         const splitRoutes = await queryContract.splitTwoRoutes(tokenIn, tokenOut,
-          netAmount, ROUTES, DISTRIBUTION_PERCENT);
+          netAmount.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
         
         const [indexOneRoute, amountOutOneRoute] = await this._getOneRoute(oneRoute);
         const [
@@ -89,7 +90,7 @@ const methods = {
           amountOutsplitRoute
         ] = await this._getSplitRoutes(splitRoutes);
 
-        if (amountOutOneRoute < amountOutsplitRoute) {
+        if (parseFloat(amountOutOneRoute) < parseFloat(amountOutsplitRoute)) {
           isSplitSwap = true;
         }
 
