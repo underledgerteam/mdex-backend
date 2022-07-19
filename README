@@ -11,4 +11,18 @@
 ```
 /api/rate?tokenIn=&tokenOut=&amount=&chainId=
 ```
+Return Example:
+```
+{
+  "fee": 10000,
+  "isSplitSwap": false,
+  "route": [
+    {
+      "index": 0,
+      "name": "Uniswap"
+    }
+  ],
+  "amount": 989999
+}
+```
 
