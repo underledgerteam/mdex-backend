@@ -63,11 +63,22 @@ const methods = {
     return [splitRouteIndex, splitRouteVolume, amountOut]
   },
 
+  calculateSplitAmountOut(percents, amount) {
+    let splitAmountOuts = [];
+
+    for (i = 0; i < percents.length; i++) {
+      splitAmountOuts.push((amount * percents[i]) / 100);
+    }
+
+    return splitAmountOuts;
+  },
+
   getBestRate(tokenIn, tokenOut, amount, chainId) {
     return new Promise(async (resolve, reject) => {
       try {
         let data = {};
         let isSplitSwap = false;
+        let splitAmountOuts = [];
 
         const wallet = await this.signedWallet(chainId);
         
@@ -92,6 +103,7 @@ const methods = {
 
         if (parseFloat(amountOutOneRoute) < parseFloat(amountOutsplitRoute)) {
           isSplitSwap = true;
+          splitAmountOuts = await this.calculateSplitAmountOut(volumesSplitRoute, netAmount);
         }
 
         data["fee"] = serviceFee;
@@ -99,7 +111,7 @@ const methods = {
 
         if (isSplitSwap) {
             data["route"] = indexSplitRoute;
-            data["amount"] = volumesSplitRoute;
+            data["amount"] = splitAmountOuts;
         } else {
           data["route"] = indexOneRoute;
           data["amount"] = amountOutOneRoute;
