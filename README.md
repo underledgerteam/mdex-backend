@@ -13,6 +13,7 @@ $ node index.js
 ``` 
 
 ## Deploy to Heroku
+Now we are deploy to Heroku project name: `mdex-backend-api`
 
 ```
 git add .
@@ -31,8 +32,10 @@ Deploy to Heroku git: `https://git.heroku.com/mdex-backend-api.git` and environm
 
 
 ## Endpoint
-[GET] Find best rate
+Now our API host is running on https://mdex-backend-api.herokuapp.com
+
 ```
+[GET] Find best rate
 /api/rate?tokenIn=&tokenOut=&amount=&chainId=
 ```
 
