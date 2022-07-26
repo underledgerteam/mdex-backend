@@ -11,6 +11,17 @@ module.exports = {
 		0: "Uniswap",
 		1: "Curve Fi."
 	},
+	
+	DEX: {
+		0: {
+			"name": "Uniswap",
+			"fee": 0.3
+		},
+		1: {
+			"name": "Curve Fi.",
+			"fee": 0.04
+		}
+	},
 
 	ROUTING_CONTRACTS: {
 		4: {
