@@ -29,10 +29,14 @@ const methods = {
     oneRouteIndex = {};
     index = indexRoute.toNumber()
 
+    dexFee = (amountOutRoute.toNumber() * DEX[index]["fee"]) / 100;
+    totalAmountOut = amountOutRoute.toNumber() - dexFee;
+
     oneRouteIndex["index"] = index;
     oneRouteIndex["name"] = ROUTING_NAME[index];
+    oneRouteIndex["fee"] = dexFee;
 
-    return [[oneRouteIndex], amountOutRoute.toString()]
+    return [[oneRouteIndex], totalAmountOut.toString()]
   },
 
   _getSplitRoutes(data) {
@@ -41,16 +45,21 @@ const methods = {
     splitRouteIndex = [];
     splitRouteVolume = [];
 
-    amountOut = amountOut.toString();
+    dexFee = (amountOut.toNumber() * DEX[index]["fee"]) / 100;
+    totalAmountOut = amountOut.toNumber() - dexFee;
 
     for (i = 0; i < indexRotes.length; i++) {
       index = indexRotes[i].toString();
 
       splitRouteVolume.push(volumeRoute[i].toString());
-      splitRouteIndex.push({"index": index, "name": ROUTING_NAME[index]});
+      splitRouteIndex.push({
+        "index": index,
+        "name": ROUTING_NAME[index],
+        "fee": dexFee
+      });
     }
 
-    return [splitRouteIndex, splitRouteVolume, amountOut]
+    return [splitRouteIndex, splitRouteVolume, totalAmountOut.toString()]
   },
 
   calculateSplitAmountOut(percents, amount) {
