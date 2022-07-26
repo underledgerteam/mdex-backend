@@ -1,6 +1,6 @@
 require("dotenv").config();
 const ethers = require("ethers");
-const { SWAP_FEE, ROUTING_NAME } = require("../utils/constants");
+const { SWAP_FEE, ROUTING_NAME, DEX } = require("../utils/constants");
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
