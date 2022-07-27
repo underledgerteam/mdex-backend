@@ -1,6 +1,10 @@
 require("dotenv").config();
 const ethers = require("ethers");
-const { SWAP_FEE, ROUTING_NAME, DEX } = require("../utils/constants");
+const { 
+  SWAP_FEE,
+  ROUTING_NAME,
+  DEX
+} = require("../utils/constants");
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
@@ -29,8 +33,8 @@ const methods = {
     oneRouteIndex = {};
     index = indexRoute.toNumber()
 
-    dexFee = (amountOutRoute.toNumber() * DEX[index]["fee"]) / 100;
-    totalAmountOut = amountOutRoute.toNumber() - dexFee;
+    dexFee = (amountOutRoute.toString() * DEX[index]["fee"]) / 100;
+    totalAmountOut = amountOutRoute.toString() - dexFee;
 
     oneRouteIndex["index"] = index;
     oneRouteIndex["name"] = ROUTING_NAME[index];
@@ -45,8 +49,8 @@ const methods = {
     splitRouteIndex = [];
     splitRouteVolume = [];
 
-    dexFee = (amountOut.toNumber() * DEX[index]["fee"]) / 100;
-    totalAmountOut = amountOut.toNumber() - dexFee;
+    dexFee = (amountOut.toString() * DEX[index]["fee"]) / 100;
+    totalAmountOut = amountOut.toString() - dexFee;
 
     for (i = 0; i < indexRotes.length; i++) {
       index = indexRotes[i].toString();

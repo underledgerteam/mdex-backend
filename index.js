@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const config = require('./configs/app')
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
 

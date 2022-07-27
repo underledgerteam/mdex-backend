@@ -3,7 +3,6 @@ const bestRouteQueryABI = require("../abis/mdexBestRouteQueryABI.json");
 
 module.exports = {
 	DISTRIBUTION_PERCENT: 5,
-	MAX_ROUTE: 2,
 	SWAP_FEE: 1,
 	ROUTES: [0, 1],
 
@@ -11,7 +10,7 @@ module.exports = {
 		0: "Uniswap",
 		1: "Curve Fi."
 	},
-	
+
 	DEX: {
 		0: {
 			"name": "Uniswap",
@@ -30,8 +29,17 @@ module.exports = {
 			ABIController: controllerABI,
 			ABIBestRouteQuery: bestRouteQueryABI,
 
-			AddressController: "0x165834eDd4A46B2Bc343f5Be824B403849728E95",
-			AddressBestRouteQuery: "0x3e14fe391F3B89A5baE68D9F807379B0A586731c"
+			AddressController: "0x8207ef2260e98b5Ae3aF0419c22c5a76e9267De2",
+			AddressBestRouteQuery: "0x92CA3294eB72b212e53Eb4b900d0D691f9cd4F4d"
+		},
+		5: {
+			Lable: "Goerli Testnet Network",
+
+			ABIController: controllerABI,
+			ABIBestRouteQuery: bestRouteQueryABI,
+
+			AddressController: "0xe2e0DfA2dC80d847F6B6B9D67FE0fDa07B10EE5a",
+			AddressBestRouteQuery: "0xd19C6F58B9D06C0C3198993Ee9C34C08BA57195e"	
 		}
 	}
 }
