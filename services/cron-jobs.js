@@ -12,7 +12,7 @@ cron.schedule("* * * * *", async function () {
 
   const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
-  await contract.updateTransaction();
+  await contract.uppdateData();
 
   console.log("Run Cron Job", PRIVATE_KEY);
 });
