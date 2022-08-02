@@ -3,7 +3,8 @@ const ethers = require("ethers");
 const { 
   SWAP_FEE,
   ROUTING_NAME,
-  DEX
+  DEX,
+  DECIMAL
 } = require("../utils/constants");
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -38,7 +39,7 @@ const methods = {
 
     oneRouteIndex["index"] = index;
     oneRouteIndex["name"] = ROUTING_NAME[index];
-    oneRouteIndex["fee"] = dexFee;
+    oneRouteIndex["fee"] = dexFee / 10 ** DECIMAL;
 
     return [[oneRouteIndex], totalAmountOut.toString()]
   },
@@ -59,7 +60,7 @@ const methods = {
       splitRouteIndex.push({
         "index": index,
         "name": ROUTING_NAME[index],
-        "fee": dexFee
+        "fee": dexFee / 10 ** DECIMAL
       });
     }
 
@@ -70,7 +71,8 @@ const methods = {
     let splitAmountOuts = [];
 
     for (i = 0; i < percents.length; i++) {
-      splitAmountOuts.push((amount * percents[i]) / 100);
+      _amount = ((amount * percents[i]) / 100) / 10 ** DECIMAL;
+      splitAmountOuts.push(_amount);
     }
 
     return splitAmountOuts;

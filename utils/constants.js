@@ -2,6 +2,7 @@ const controllerABI = require("../abis/mdexControllerABI.json");
 const bestRouteQueryABI = require("../abis/mdexBestRouteQueryABI.json");
 
 module.exports = {
+  DECIMAL: 18,
   DISTRIBUTION_PERCENT: 5,
   SWAP_FEE: 1,
   ROUTES: [0, 1],
@@ -32,6 +33,7 @@ module.exports = {
       MultisigWallet: "0x2A5e8342EEcD3DCD22D4720A6f3B7dDFCA129868",
       AddressController: "0x8207ef2260e98b5Ae3aF0419c22c5a76e9267De2",
       AddressBestRouteQuery: "0x92CA3294eB72b212e53Eb4b900d0D691f9cd4F4d",
+      StableToken: "0x3FFc03F05D1869f493c7dbf913E636C6280e0ff9"
     },
     5: {
       Lable: "Goerli Testnet Network",
@@ -42,6 +44,7 @@ module.exports = {
       MultisigWallet: "0x5D9b61B62D27E310FE8679a76d27a558bD0E016D",
       AddressController: "0xe2e0DfA2dC80d847F6B6B9D67FE0fDa07B10EE5a",
       AddressBestRouteQuery: "0xd19C6F58B9D06C0C3198993Ee9C34C08BA57195e",
+      StableToken: "0x26FE8a8f86511d678d031a022E48FfF41c6a3e3b"
     },
   },
 };
