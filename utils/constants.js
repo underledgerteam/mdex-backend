@@ -2,7 +2,7 @@ const controllerABI = require("../abis/mdexControllerABI.json");
 const bestRouteQueryABI = require("../abis/mdexBestRouteQueryABI.json");
 
 module.exports = {
-  DECIMAL: 18,
+  DECIMALS: 18,
   DISTRIBUTION_PERCENT: 5,
   SWAP_FEE: 1,
   ROUTES: [0, 1],

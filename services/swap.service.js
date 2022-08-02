@@ -4,7 +4,7 @@ const {
   SWAP_FEE,
   ROUTING_NAME,
   DEX,
-  DECIMAL
+  DECIMALS
 } = require("../utils/constants");
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -28,54 +28,49 @@ const methods = {
     return (amount * SWAP_FEE) / 100;
   },
 
-  _getOneRoute(data) {
-    [indexRoute, amountOutRoute] = data;
+  transferSourceOneRoute(routeIndex, amountOut) {
+    const _routeIndex = routeIndex.toNumber();
 
-    oneRouteIndex = {};
-    index = indexRoute.toNumber()
-
-    dexFee = (amountOutRoute.toString() * DEX[index]["fee"]) / 100;
-    totalAmountOut = amountOutRoute.toString() - dexFee;
-
-    oneRouteIndex["index"] = index;
-    oneRouteIndex["name"] = ROUTING_NAME[index];
-    oneRouteIndex["fee"] = dexFee / 10 ** DECIMAL;
-
-    return [[oneRouteIndex], totalAmountOut.toString()]
-  },
-
-  _getSplitRoutes(data) {
-    [indexRotes, volumeRoute, amountOut] = data;
+    const poolFee = (amountOut * DEX[routeIndex]["fee"]) / 100;
+    const amountWithFee = amountOut - poolFee;
     
-    splitRouteIndex = [];
-    splitRouteVolume = [];
+    const routeName = ROUTING_NAME[_routeIndex];
 
-    dexFee = (amountOut.toString() * DEX[index]["fee"]) / 100;
-    totalAmountOut = amountOut.toString() - dexFee;
-
-    for (i = 0; i < indexRotes.length; i++) {
-      index = indexRotes[i].toString();
-
-      splitRouteVolume.push(volumeRoute[i].toString());
-      splitRouteIndex.push({
-        "index": index,
-        "name": ROUTING_NAME[index],
-        "fee": dexFee / 10 ** DECIMAL
-      });
+    const sourceOneRouteData = {
+      "fee": poolFee / 10 ** DECIMALS,
+      "index": _routeIndex,
+      "name": routeName
     }
 
-    return [splitRouteIndex, splitRouteVolume, totalAmountOut.toString()]
+    return [sourceOneRouteData, amountWithFee]
   },
 
-  calculateSplitAmountOut(percents, amount) {
-    let splitAmountOuts = [];
+  transferSourceSplitRoute(routeIndexs, volumes, amountOut) {
+    const sourceSplitRouteData = [];
+    const sourceSplitRouteAmount = [];
 
-    for (i = 0; i < percents.length; i++) {
-      _amount = ((amount * percents[i]) / 100) / 10 ** DECIMAL;
-      splitAmountOuts.push(_amount);
+    const _amountOut = amountOut.toString();
+
+    for (i = 0; i < routeIndexs.length; i++) {
+      if (volumes[i] > 0) {
+        let _routeIndex = routeIndexs[i].toNumber();
+        let routeName = ROUTING_NAME[_routeIndex];
+
+        poolFee = (_amountOut * DEX[_routeIndex]["fee"]) / 100;
+        amountWithFee = ((_amountOut * volumes[i].toString()) / 100) - poolFee;
+        sourceSplitRouteAmount.push(amountWithFee);
+
+        sourceSplitRouteData.push({
+          "fee": poolFee / 10 ** DECIMALS,
+          "index": _routeIndex,
+          "name": routeName,
+        });
+      }
     }
-
-    return splitAmountOuts;
+    
+    totalAmount = sourceSplitRouteAmount.reduce((a, b) => a + b, 0);
+    
+    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
   }
 }
 
