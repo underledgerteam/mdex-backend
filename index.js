@@ -80,12 +80,12 @@ app.get("/cross-rate", async (req, res) => {
   // Define request query
   const tokenIn = req.query.tokenIn;
   const tokenOut = req.query.tokenOut;
-  const amount = req.query.amount;
+  const amountIn = req.query.amount;
   const sourceChainId = req.query.sourceChainId;
   const destinationChainId = req.query.destinationChainId;
 
   // Convert amount to Uint
-  const amountIn = ethers.utils.parseUnits(amount.toString(), DECIMALS);
+  // const amountIn = ethers.utils.parseUnits(amount.toString(), DECIMALS);
 
   // SOURCE: Query pair of tokenIn - stableToken ============================================
   const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
@@ -108,14 +108,14 @@ app.get("/cross-rate", async (req, res) => {
   // Source split route
   const sourceSplitRoute = await sourceQueryContract.splitTwoRoutes(
     tokenIn, sourceConfig.StableToken, bignumberNetAmountIn.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
-
+  
   const [sourceSplitRouteData, sourceSplitRouteAmount, sourceSplitRouteNetAmountOut]
     = transferSourceSplitRoute(
       sourceSplitRoute.routeIndexs, sourceSplitRoute.volumns, sourceSplitRoute.amountOut);
 
   // Prepare return data
   let totalAmountOut;
-  let data = { "fee": serviceFee / 10 ** DECIMALS};
+  let data = { "fee": serviceFee};
 
   if (parseFloat(sourceOneRouteAmountOut) < parseFloat(sourceSplitRouteNetAmountOut)) {
     totalAmountOut = sourceSplitRouteNetAmountOut;
@@ -123,7 +123,7 @@ app.get("/cross-rate", async (req, res) => {
     let displayAmountOuts = [];
     for (let i = 0; i < sourceSplitRouteAmount.length; i++) {
       const amountOut = new BigNumber(sourceSplitRouteAmount[i]);
-      displayAmountOuts.push(amountOut.toFixed() / 10 ** DECIMALS);
+      displayAmountOuts.push(amountOut.toFixed());
     }
 
     data["source"] = {
@@ -136,7 +136,7 @@ app.get("/cross-rate", async (req, res) => {
     totalAmountOut = sourceOneRouteAmountOut;
 
     data["source"] = {
-      "amount": sourceOneRouteAmountOut / 10 ** DECIMALS,
+      "amount": sourceOneRouteAmountOut,
       "chainId": sourceChainId,
       "isSplitSwap": false,
       "route": sourceOneRouteData
@@ -144,7 +144,10 @@ app.get("/cross-rate", async (req, res) => {
   }
 
   // DESTINATION: Query pair of stableToken - tokenOut ============================================
-  const desAmountIn = new BigNumber(totalAmountOut);
+  // !! HOT FIX: Round up number to prevent invalid Bignumber string
+  const _totalAmountOut = Math.round(totalAmountOut);
+
+  const desAmountIn = new BigNumber(_totalAmountOut);
   const desConfig = ROUTING_CONTRACTS[destinationChainId];
 
   const desWallet = await signedWallet(destinationChainId);
@@ -170,7 +173,7 @@ app.get("/cross-rate", async (req, res) => {
     let displayAmountOuts = [];
     for (let i = 0; i < desSplitRouteAmount.length; i++) {
       const amountOut = new BigNumber(desSplitRouteAmount[i]);
-      displayAmountOuts.push(amountOut.toFixed() / 10 ** DECIMALS);
+      displayAmountOuts.push(amountOut.toFixed());
     }
 
     data["destination"] = {
@@ -181,7 +184,7 @@ app.get("/cross-rate", async (req, res) => {
     }
   } else {
     data["destination"] = {
-      "amount": desOneRouteAmountOut / 10 ** DECIMALS,
+      "amount": desOneRouteAmountOut,
       "chainId": destinationChainId,
       "isSplitSwap": false,
       "route": desOneRouteData

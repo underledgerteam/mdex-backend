@@ -37,7 +37,7 @@ const methods = {
     const routeName = ROUTING_NAME[_routeIndex];
 
     const sourceOneRouteData = {
-      "fee": poolFee / 10 ** DECIMALS,
+      "fee": poolFee,
       "index": _routeIndex,
       "name": routeName
     }
@@ -61,7 +61,7 @@ const methods = {
         sourceSplitRouteAmount.push(amountWithFee);
 
         sourceSplitRouteData.push({
-          "fee": poolFee / 10 ** DECIMALS,
+          "fee": poolFee,
           "index": _routeIndex,
           "name": routeName,
         });
