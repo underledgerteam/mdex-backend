@@ -3,7 +3,8 @@ const app = express();
 const config = require('./configs/app')
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
-
+// EXPONENTIAL_AT Default value: [-7, 20]
+BigNumber.config({ EXPONENTIAL_AT: [-999, 999] })
 // Cron job
 require("./services/cron-jobs");
 
@@ -106,7 +107,7 @@ app.get("/cross-rate", async (req, res) => {
   const netAmountIn = parseFloat(_amountIn) - parseFloat(_serviceFee);
   console.log("netAmountIn: ", netAmountIn);
 
-  const x = (netAmountIn * 10 ** 18).toString()
+  const x = new BigNumber((netAmountIn * 10 ** 18)).toString()
   console.log("x tpyr", typeof(x));
   console.log("x ", x);
 
