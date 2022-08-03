@@ -135,7 +135,7 @@ app.get("/cross-rate", async (req, res) => {
       "route": sourceSplitRouteData
     }
   } else {
-    totalAmountOut = sourceOneRouteAmountOut;
+    totalAmountOut = sourceOneRouteNetAmountOut;
 
     data["source"] = {
       "amount": sourceOneRouteAmountOut,
