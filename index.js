@@ -84,30 +84,45 @@ app.get("/cross-rate", async (req, res) => {
   const sourceChainId = req.query.sourceChainId;
   const destinationChainId = req.query.destinationChainId;
 
+  // console.log("amountIn: ", amountIn);
+
   // Convert amount to Uint
   // const amountIn = ethers.utils.parseUnits(amount.toString(), DECIMALS);
 
   // SOURCE: Query pair of tokenIn - stableToken ============================================
   const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
-  const serviceFee = getServiceFee(amountIn);
-
+  
   const sourceWallet = await signedWallet(sourceChainId);
   const sourceQueryContract = new ethers.Contract(
     sourceConfig.AddressBestRouteQuery, sourceConfig.ABIBestRouteQuery, sourceWallet);
+    
+  const serviceFee = getServiceFee(amountIn);
+  const _serviceFee = serviceFee / 10 ** 18;
+  const _amountIn = amountIn / 10 ** 18;
 
-  const netAmountIn = amountIn - serviceFee;
-  const bignumberNetAmountIn = new BigNumber(netAmountIn);
+  console.log("_amountIn: ", _amountIn);
+  console.log("_serviceFee: ", _serviceFee);
+
+  const netAmountIn = parseFloat(_amountIn) - parseFloat(_serviceFee);
+  console.log("netAmountIn: ", netAmountIn);
+
+  const x = (netAmountIn * 10 ** 18).toString()
+  console.log("x tpyr", typeof(x));
+  console.log("x ", x);
+
+  // const y = ethers.utils.parseEther(x)
 
   // Source one route
   const sourceOneRoute = await sourceQueryContract.oneRoute(
-    tokenIn, sourceConfig.StableToken, bignumberNetAmountIn.toFixed(), ROUTES);
+    tokenIn, sourceConfig.StableToken, x, ROUTES);
+  console.log("sourceOneRoute: ", sourceOneRoute);
 
   const [sourceOneRouteData, sourceOneRouteAmountOut, sourceOneRouteNetAmountOut]
     = transferSourceOneRoute(sourceOneRoute.routeIndex, sourceOneRoute.amountOut);
 
   // Source split route
   const sourceSplitRoute = await sourceQueryContract.splitTwoRoutes(
-    tokenIn, sourceConfig.StableToken, bignumberNetAmountIn.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
+    tokenIn, sourceConfig.StableToken, x, ROUTES, DISTRIBUTION_PERCENT);
 
   const [sourceSplitRouteData, sourceSplitRouteAmount, sourceSplitRouteNetAmountOut]
     = transferSourceSplitRoute(
@@ -115,7 +130,7 @@ app.get("/cross-rate", async (req, res) => {
 
   // Prepare return data
   let totalAmountOut;
-  let data = { "fee": serviceFee };
+  let data = { "fee": _serviceFee * 10 ** 18 };
 
   if (parseFloat(sourceOneRouteNetAmountOut) < parseFloat(sourceSplitRouteNetAmountOut) &&
     sourceSplitRouteData.length >= 2) {
@@ -144,6 +159,8 @@ app.get("/cross-rate", async (req, res) => {
       "route": sourceOneRouteData
     }
   }
+
+  // console.log(data);
 
   // DESTINATION: Query pair of stableToken - tokenOut ============================================
   // !! HOT FIX: Round up number to prevent invalid Bignumber string
