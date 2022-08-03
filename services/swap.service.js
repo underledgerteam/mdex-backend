@@ -1,18 +1,13 @@
 require("dotenv").config();
-
 const ethers = require("ethers");
-const assert = require("assert");
-const BigNumber = require('bignumber.js');
-
-const { PRIVATE_KEY } = process.env;
-const {
-  DISTRIBUTION_PERCENT,
-  MAX_ROUTE,
-  ROUTES,
+const { 
   SWAP_FEE,
   ROUTING_NAME,
-  ROUTING_CONTRACTS
+  DEX,
+  DECIMALS
 } = require("../utils/constants");
+
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 const methods = {
   signedWallet(chainId) {
@@ -33,134 +28,57 @@ const methods = {
     return (amount * SWAP_FEE) / 100;
   },
 
-  _getOneRoute(data) {
-    [indexRoute, amountOutRoute] = data;
+  transferSourceOneRoute(routeIndex, amountOut) {
+    const sourceSplitRouteData = [];
+    const sourceSplitRouteAmount = [];
 
-    oneRouteIndex = {};
-    index = indexRoute.toNumber()
+    const _routeIndex = routeIndex.toNumber();
 
-    oneRouteIndex["index"] = index;
-    oneRouteIndex["name"] = ROUTING_NAME[index];
-
-    return [[oneRouteIndex], amountOutRoute.toString()]
-  },
-
-  _getSplitRoutes(data) {
-    [indexRotes, volumeRoute, amountOut] = data;
+    const poolFee = (amountOut * DEX[routeIndex]["fee"]) / 100;
+    const amountWithFee = amountOut - poolFee;
     
-    splitRouteIndex = [];
-    splitRouteVolume = [];
+    const routeName = ROUTING_NAME[_routeIndex];
 
-    amountOut = amountOut.toString();
-
-    for (i = 0; i < indexRotes.length; i++) {
-      index = indexRotes[i].toString();
-
-      splitRouteVolume.push(volumeRoute[i].toString());
-      splitRouteIndex.push({"index": index, "name": ROUTING_NAME[index]});
+    const sourceOneRouteData = {
+      "fee": poolFee,
+      "index": _routeIndex,
+      "name": routeName
     }
+    sourceSplitRouteData.push(sourceOneRouteData);
+    sourceSplitRouteAmount.push(amountWithFee);
 
-    return [splitRouteIndex, splitRouteVolume, amountOut]
-  },
-
-  calculateSplitAmountOut(percents, amount) {
-    let splitAmountOuts = [];
-
-    for (i = 0; i < percents.length; i++) {
-      splitAmountOuts.push((amount * percents[i]) / 100);
-    }
-
-    return splitAmountOuts;
-  },
-
-  getBestRate(tokenIn, tokenOut, amount, chainId) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        let data = {};
-        let isSplitSwap = false;
-        let splitAmountOuts = [];
-
-        const wallet = await this.signedWallet(chainId);
-        
-        const routingConfig = ROUTING_CONTRACTS[chainId];
-        const serviceFee = await this.getServiceFee(amount);
-        
-        const netAmount = new BigNumber(amount - serviceFee);
-
-        const queryContract = new ethers.Contract(
-          routingConfig.AddressBestRouteQuery, routingConfig.ABIBestRouteQuery, wallet);
-
-        const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, netAmount.toFixed(), ROUTES);
-        const splitRoutes = await queryContract.splitTwoRoutes(tokenIn, tokenOut,
-          netAmount.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
-        
-        const [indexOneRoute, amountOutOneRoute] = await this._getOneRoute(oneRoute);
-        const [
-          indexSplitRoute,
-          volumesSplitRoute,
-          amountOutsplitRoute
-        ] = await this._getSplitRoutes(splitRoutes);
-
-        if (parseFloat(amountOutOneRoute) < parseFloat(amountOutsplitRoute)) {
-          isSplitSwap = true;
-          splitAmountOuts = await this.calculateSplitAmountOut(volumesSplitRoute, netAmount);
-        }
-
-        data["fee"] = serviceFee;
-        data["isSplitSwap"] = isSplitSwap;
-
-        if (isSplitSwap) {
-            data["route"] = indexSplitRoute;
-            data["amount"] = splitAmountOuts;
-        } else {
-          data["route"] = indexOneRoute;
-          data["amount"] = amountOutOneRoute;
-        }
+    totalAmount = amountWithFee;
     
-        resolve(data);
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
   },
 
-  swap(tokenIn, tokenOut, chainId, isSplitSwap, tradingAmount, tradingRouteIndex) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // validate input
-        if (isSplitSwap) {
-          assert(tradingAmount.length == MAX_ROUTE, "Trading amounts invalid length");
-          assert(tradingRouteIndex.length == MAX_ROUTE, "Trading routes index invalid length");
-        } else {
-          assert(tradingAmount.length == 1, "Trading amounts can have only 1 length");
-          assert(tradingAmount.length == 1, "Trading routes index can have only 1 length");
-        }
+  transferSourceSplitRoute(routeIndexs, volumes, amountOut) {
+    const sourceSplitRouteData = [];
+    const sourceSplitRouteAmount = [];
 
-        const wallet = await this.signedWallet(chainId);
-        const routingConfig = ROUTING_CONTRACTS[chainId];
+    const _amountOut = amountOut.toString();
 
-        const controllerContract = new ethers.Contract(routingConfig.AddressController,
-          routingConfig.ABIController, wallet);
+    for (i = 0; i < routeIndexs.length; i++) {
+      if (volumes[i] > 0) {
+        let _routeIndex = routeIndexs[i].toNumber();
+        let routeName = ROUTING_NAME[_routeIndex];
 
-        if (!isSplitSwap) {
-          await controllerContract.swap(tokenIn, tokenOut, tradingAmount[0], tradingRouteIndex[0]);
-        } else {
-          await controllerContract.spiltSwap(
-            tokenIn,
-            tokenOut,
-            amount,
-            tradingRouteIndex,
-            tradingAmount
-          );
-        }
+        poolFee = (_amountOut * DEX[_routeIndex]["fee"]) / 100;
+        amountWithFee = ((_amountOut * volumes[i].toString()) / 100) - poolFee;
+        sourceSplitRouteAmount.push(amountWithFee);
 
-        resolve();
-      } catch (error) {
-        reject(error);
+        sourceSplitRouteData.push({
+          "fee": poolFee,
+          "index": _routeIndex,
+          "name": routeName,
+        });
       }
-    });
+    }
+    
+    totalAmount = sourceSplitRouteAmount.reduce((a, b) => a + b, 0);
+    
+    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
   }
-
 }
 
 module.exports = { ...methods }

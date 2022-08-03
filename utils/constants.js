@@ -2,25 +2,49 @@ const controllerABI = require("../abis/mdexControllerABI.json");
 const bestRouteQueryABI = require("../abis/mdexBestRouteQueryABI.json");
 
 module.exports = {
-	DISTRIBUTION_PERCENT: 5,
-	MAX_ROUTE: 2,
-	SWAP_FEE: 1,
-	ROUTES: [0, 1],
+  DECIMALS: 18,
+  DISTRIBUTION_PERCENT: 5,
+  SWAP_FEE: 1,
+  ROUTES: [0, 1],
 
-	ROUTING_NAME: {
-		0: "Uniswap",
-		1: "Curve Fi."
-	},
+  ROUTING_NAME: {
+    0: "Uniswap",
+    1: "Curve Fi.",
+  },
 
-	ROUTING_CONTRACTS: {
-		4: {
-			Lable: "Rinkeby Testnet Network",
+  DEX: {
+    0: {
+      name: "Uniswap",
+      fee: 0.3,
+    },
+    1: {
+      name: "Curve Fi.",
+      fee: 0.04,
+    },
+  },
 
-			ABIController: controllerABI,
-			ABIBestRouteQuery: bestRouteQueryABI,
+  ROUTING_CONTRACTS: {
+    4: {
+      Lable: "Rinkeby Testnet Network",
 
-			AddressController: "0x165834eDd4A46B2Bc343f5Be824B403849728E95",
-			AddressBestRouteQuery: "0x3e14fe391F3B89A5baE68D9F807379B0A586731c"
-		}
-	}
-}
+      ABIController: controllerABI,
+      ABIBestRouteQuery: bestRouteQueryABI,
+
+      MultisigWallet: "0x2A5e8342EEcD3DCD22D4720A6f3B7dDFCA129868",
+      AddressController: "0x8207ef2260e98b5Ae3aF0419c22c5a76e9267De2",
+      AddressBestRouteQuery: "0x92CA3294eB72b212e53Eb4b900d0D691f9cd4F4d",
+      StableToken: "0x3FFc03F05D1869f493c7dbf913E636C6280e0ff9"
+    },
+    5: {
+      Lable: "Goerli Testnet Network",
+
+      ABIController: controllerABI,
+      ABIBestRouteQuery: bestRouteQueryABI,
+
+      MultisigWallet: "0x5D9b61B62D27E310FE8679a76d27a558bD0E016D",
+      AddressController: "0xe2e0DfA2dC80d847F6B6B9D67FE0fDa07B10EE5a",
+      AddressBestRouteQuery: "0xd19C6F58B9D06C0C3198993Ee9C34C08BA57195e",
+      StableToken: "0x26FE8a8f86511d678d031a022E48FfF41c6a3e3b"
+    },
+  },
+};
