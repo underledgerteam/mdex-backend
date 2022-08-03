@@ -29,6 +29,9 @@ const methods = {
   },
 
   transferSourceOneRoute(routeIndex, amountOut) {
+    const sourceSplitRouteData = [];
+    const sourceSplitRouteAmount = [];
+
     const _routeIndex = routeIndex.toNumber();
 
     const poolFee = (amountOut * DEX[routeIndex]["fee"]) / 100;
@@ -41,8 +44,12 @@ const methods = {
       "index": _routeIndex,
       "name": routeName
     }
+    sourceSplitRouteData.push(sourceOneRouteData);
+    sourceSplitRouteAmount.push(amountWithFee);
 
-    return [sourceOneRouteData, amountWithFee]
+    totalAmount = amountWithFee;
+    
+    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
   },
 
   transferSourceSplitRoute(routeIndexs, volumes, amountOut) {

@@ -102,22 +102,24 @@ app.get("/cross-rate", async (req, res) => {
   const sourceOneRoute = await sourceQueryContract.oneRoute(
     tokenIn, sourceConfig.StableToken, bignumberNetAmountIn.toFixed(), ROUTES);
 
-  const [sourceOneRouteData, sourceOneRouteAmountOut]
+  const [sourceOneRouteData, sourceOneRouteAmountOut, sourceOneRouteNetAmountOut]
     = transferSourceOneRoute(sourceOneRoute.routeIndex, sourceOneRoute.amountOut);
 
   // Source split route
   const sourceSplitRoute = await sourceQueryContract.splitTwoRoutes(
     tokenIn, sourceConfig.StableToken, bignumberNetAmountIn.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
-  
+
   const [sourceSplitRouteData, sourceSplitRouteAmount, sourceSplitRouteNetAmountOut]
     = transferSourceSplitRoute(
       sourceSplitRoute.routeIndexs, sourceSplitRoute.volumns, sourceSplitRoute.amountOut);
 
   // Prepare return data
   let totalAmountOut;
-  let data = { "fee": serviceFee};
+  let data = { "fee": serviceFee };
 
-  if (parseFloat(sourceOneRouteAmountOut) < parseFloat(sourceSplitRouteNetAmountOut)) {
+  if (parseFloat(sourceOneRouteNetAmountOut) < parseFloat(sourceSplitRouteNetAmountOut) &&
+    sourceSplitRouteData.length >= 2) {
+
     totalAmountOut = sourceSplitRouteNetAmountOut;
 
     let displayAmountOuts = [];
