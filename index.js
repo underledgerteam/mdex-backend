@@ -3,8 +3,10 @@ const app = express();
 const config = require('./configs/app')
 const ethers = require("ethers");
 const BigNumber = require('bignumber.js');
+const Decimal = require('decimal.js');
+
 // EXPONENTIAL_AT Default value: [-7, 20]
-BigNumber.config({ EXPONENTIAL_AT: [-999, 999] })
+// BigNumber.config({ EXPONENTIAL_AT: [-999, 999] })
 // Cron job
 require("./services/cron-jobs");
 
@@ -85,67 +87,49 @@ app.get("/cross-rate", async (req, res) => {
   const sourceChainId = req.query.sourceChainId;
   const destinationChainId = req.query.destinationChainId;
 
-  // console.log("amountIn: ", amountIn);
-
-  // Convert amount to Uint
-  // const amountIn = ethers.utils.parseUnits(amount.toString(), DECIMALS);
-
   // SOURCE: Query pair of tokenIn - stableToken ============================================
   const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
   
   const sourceWallet = await signedWallet(sourceChainId);
   const sourceQueryContract = new ethers.Contract(
     sourceConfig.AddressBestRouteQuery, sourceConfig.ABIBestRouteQuery, sourceWallet);
-    
-  const serviceFee = getServiceFee(amountIn);
-  const _serviceFee = serviceFee / 10 ** 18;
-  const _amountIn = amountIn / 10 ** 18;
 
-  console.log("_amountIn: ", _amountIn);
-  console.log("_serviceFee: ", _serviceFee);
+  const ethAmountIn = ethers.utils.formatEther(amountIn, 18);
+  const serviceFee = Decimal(ethAmountIn).mul(0.01);
+  const amountInWithFee = Decimal(ethAmountIn).sub(serviceFee);
 
-  const netAmountIn = parseFloat(_amountIn) - parseFloat(_serviceFee);
-  console.log("netAmountIn: ", netAmountIn);
-
-  const x = new BigNumber((netAmountIn * 10 ** 18)).toString()
-  console.log("x tpyr", typeof(x));
-  console.log("x ", x);
-
-  // const y = ethers.utils.parseEther(x)
+  const weiServiceFee = ethers.utils.parseUnits(Decimal(serviceFee).toFixed(18), 18);
+  const weiAmountIn = ethers.utils.parseUnits(Decimal(amountInWithFee).toFixed(18), 18);
 
   // Source one route
   const sourceOneRoute = await sourceQueryContract.oneRoute(
-    tokenIn, sourceConfig.StableToken, x, ROUTES);
-  console.log("sourceOneRoute: ", sourceOneRoute);
+    tokenIn, sourceConfig.StableToken, weiAmountIn, ROUTES);
 
   const [sourceOneRouteData, sourceOneRouteAmountOut, sourceOneRouteNetAmountOut]
     = transferSourceOneRoute(sourceOneRoute.routeIndex, sourceOneRoute.amountOut);
 
   // Source split route
   const sourceSplitRoute = await sourceQueryContract.splitTwoRoutes(
-    tokenIn, sourceConfig.StableToken, x, ROUTES, DISTRIBUTION_PERCENT);
+    tokenIn, sourceConfig.StableToken, weiAmountIn, ROUTES, DISTRIBUTION_PERCENT);
 
   const [sourceSplitRouteData, sourceSplitRouteAmount, sourceSplitRouteNetAmountOut]
     = transferSourceSplitRoute(
       sourceSplitRoute.routeIndexs, sourceSplitRoute.volumns, sourceSplitRoute.amountOut);
 
   // Prepare return data
-  let totalAmountOut;
-  let data = { "fee": _serviceFee * 10 ** 18 };
+  let totalAmountOut = 0;
+  let data = {};
 
+  // Define service fee
+  data["fee"] = weiServiceFee;
+      
   if (parseFloat(sourceOneRouteNetAmountOut) < parseFloat(sourceSplitRouteNetAmountOut) &&
     sourceSplitRouteData.length >= 2) {
-
+    
     totalAmountOut = sourceSplitRouteNetAmountOut;
 
-    let displayAmountOuts = [];
-    for (let i = 0; i < sourceSplitRouteAmount.length; i++) {
-      const amountOut = new BigNumber(sourceSplitRouteAmount[i]);
-      displayAmountOuts.push(amountOut.toFixed());
-    }
-
     data["source"] = {
-      "amount": displayAmountOuts,
+      "amount": sourceSplitRouteAmount,
       "chainId": sourceChainId,
       "isSplitSwap": true,
       "route": sourceSplitRouteData
@@ -161,43 +145,36 @@ app.get("/cross-rate", async (req, res) => {
     }
   }
 
-  // console.log(data);
+  console.log("totalAmountOut: ", totalAmountOut);
 
   // DESTINATION: Query pair of stableToken - tokenOut ============================================
   // !! HOT FIX: Round up number to prevent invalid Bignumber string
   const _totalAmountOut = Math.round(totalAmountOut);
 
-  const desAmountIn = new BigNumber(_totalAmountOut);
   const desConfig = ROUTING_CONTRACTS[destinationChainId];
-
+  
   const desWallet = await signedWallet(destinationChainId);
   const desQueryContract = new ethers.Contract(
     desConfig.AddressBestRouteQuery, desConfig.ABIBestRouteQuery, desWallet);
-
+      
   // Destination one route
   const desOneRoute = await desQueryContract.oneRoute(
-    desConfig.StableToken, tokenOut, desAmountIn.toFixed(), ROUTES);
+    desConfig.StableToken, tokenOut, _totalAmountOut, ROUTES);
 
   const [desOneRouteData, desOneRouteAmountOut]
     = transferSourceOneRoute(desOneRoute.routeIndex, desOneRoute.amountOut);
 
   // Destination split route
   const desSplitRoute = await desQueryContract.splitTwoRoutes(
-    desConfig.StableToken, tokenOut, desAmountIn.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
+    desConfig.StableToken, tokenOut, _totalAmountOut, ROUTES, DISTRIBUTION_PERCENT);
 
   const [desSplitRouteData, desSplitRouteAmount, desSplitRouteNetAmountOut]
     = transferSourceSplitRoute(
       desSplitRoute.routeIndexs, desSplitRoute.volumns, desSplitRoute.amountOut);
 
   if (parseFloat(desOneRouteAmountOut) < parseFloat(desSplitRouteNetAmountOut)) {
-    let displayAmountOuts = [];
-    for (let i = 0; i < desSplitRouteAmount.length; i++) {
-      const amountOut = new BigNumber(desSplitRouteAmount[i]);
-      displayAmountOuts.push(amountOut.toFixed());
-    }
-
     data["destination"] = {
-      "amount": displayAmountOuts,
+      "amount": desSplitRouteAmount,
       "chainId": destinationChainId,
       "isSplitSwap": true,
       "route": desSplitRouteData
