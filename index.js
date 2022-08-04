@@ -15,10 +15,7 @@ require('./configs/express')(app)
 
 const {
   signedWallet,
-  getServiceFee,
   calculateSplitAmountOut,
-  _getOneRoute,
-  _getSplitRoutes,
   transferSourceOneRoute,
   transferSourceSplitRoute
 } = require("./services/swap.service");
@@ -35,47 +32,55 @@ let port = process.env.PORT || 9000;
 app.get("/rate", async (req, res) => {
   const tokenIn = req.query.tokenIn;
   const tokenOut = req.query.tokenOut;
-  const amount = req.query.amount;
+  const amountIn = req.query.amount;
   const chainId = req.query.chainId;
 
-  let data = {};
-  let isSplitSwap = false;
-  let splitAmountOuts = [];
+  const config = ROUTING_CONTRACTS[chainId];
 
   const wallet = await signedWallet(chainId);
-
-  const routingConfig = ROUTING_CONTRACTS[chainId];
-  const serviceFee = getServiceFee(amount);
-
-  const netAmount = new BigNumber(amount - serviceFee);
-
   const queryContract = new ethers.Contract(
-    routingConfig.AddressBestRouteQuery, routingConfig.ABIBestRouteQuery, wallet);
+    config.AddressBestRouteQuery, config.ABIBestRouteQuery, wallet);
 
-  const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, netAmount.toFixed(), ROUTES);
-  const splitRoutes = await queryContract.splitTwoRoutes(tokenIn, tokenOut,
-    netAmount.toFixed(), ROUTES, DISTRIBUTION_PERCENT);
+  const ethAmountIn = ethers.utils.formatEther(amountIn, 18);
+  const serviceFee = Decimal(ethAmountIn).mul(0.01);
+  const amountInWithFee = Decimal(ethAmountIn).sub(serviceFee);
 
-  const [indexOneRoute, amountOutOneRoute] = _getOneRoute(oneRoute);
-  const [indexSplitRoute, volumesSplitRoute, amountOutsplitRoute] = _getSplitRoutes(splitRoutes);
+  const weiServiceFee = ethers.utils.parseUnits(Decimal(serviceFee).toFixed(18), 18);
+  const weiAmountIn = ethers.utils.parseUnits(Decimal(amountInWithFee).toFixed(18), 18);
 
-  if (parseFloat(amountOutOneRoute) < parseFloat(amountOutsplitRoute)) {
-    isSplitSwap = true;
-    splitAmountOuts = calculateSplitAmountOut(volumesSplitRoute, netAmount);
-  }
+  // One route
+  const oneRoute = await queryContract.oneRoute(tokenIn, tokenOut, weiAmountIn, ROUTES);
 
-  data["fee"] = serviceFee;
-  data["isSplitSwap"] = isSplitSwap;
+  const [oneRouteData, oneRouteAmountOut, oneRouteNetAmountOut] 
+    = transferSourceOneRoute(oneRoute.routeIndex, oneRoute.amountOut);
 
-  if (isSplitSwap) {
-    data["route"] = indexSplitRoute;
-    data["amount"] = splitAmountOuts;
+  // Split Route
+  const splitRoute = await queryContract.splitTwoRoutes(
+    tokenIn, tokenOut, weiAmountIn, ROUTES, DISTRIBUTION_PERCENT);
+
+  const [splitRouteData, splitRouteAmount, splitRouteNetAmountOut]
+    = transferSourceSplitRoute(
+      splitRoute.routeIndexs, splitRoute.volumns, splitRoute.amountOut);
+
+  // Prepare return data
+  let data = {};
+
+  // Define service fee
+  data["fee"] = weiServiceFee.toString();
+      
+  if (parseFloat(oneRouteNetAmountOut) < parseFloat(splitRouteNetAmountOut) &&
+    splitRouteData.length >= 2) {
+
+    data["amount"] = splitRouteAmount
+    data["isSplitSwap"] = true
+    data["route"] = splitRouteData
   } else {
-    data["route"] = indexOneRoute;
-    data["amount"] = amountOutOneRoute;
+    data["amount"] = oneRouteAmountOut
+    data["isSplitSwap"] = false
+    data["route"] = oneRouteData
   }
 
-  res.send(data);
+  res.send(data)
 });
 
 
@@ -121,7 +126,7 @@ app.get("/cross-rate", async (req, res) => {
   let data = {};
 
   // Define service fee
-  data["fee"] = weiServiceFee;
+  data["fee"] = weiServiceFee.toString();
       
   if (parseFloat(sourceOneRouteNetAmountOut) < parseFloat(sourceSplitRouteNetAmountOut) &&
     sourceSplitRouteData.length >= 2) {
