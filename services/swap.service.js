@@ -1,84 +1,142 @@
-require("dotenv").config();
 const ethers = require("ethers");
-const { 
+const Decimal = require('decimal.js');
+const {
   SWAP_FEE,
   ROUTING_NAME,
   DEX,
-  DECIMALS
+  ROUTING_CONTRACTS,
+  ROUTES,
+  DISTRIBUTION_PERCENT
 } = require("../utils/constants");
+
+require("dotenv").config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
-const methods = {
-  signedWallet(chainId) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const network = ethers.providers.getNetwork(parseInt(chainId));
-        const provider = ethers.getDefaultProvider(network);
-        const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const signedWallet = async (chainId) => {
+  try {
+    const network = ethers.providers.getNetwork(parseInt(chainId));
+    const provider = ethers.getDefaultProvider(network);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-        resolve(wallet);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  },
-
-  getServiceFee(amount) {
-    return (amount * SWAP_FEE) / 100;
-  },
-
-  transferSourceOneRoute(routeIndex, amountOut) {
-    const sourceSplitRouteData = [];
-    const sourceSplitRouteAmount = [];
-
-    const _routeIndex = routeIndex.toNumber();
-
-    const poolFee = (amountOut * DEX[routeIndex]["fee"]) / 100;
-    const amountWithFee = amountOut - poolFee;
-    
-    const routeName = ROUTING_NAME[_routeIndex];
-
-    const sourceOneRouteData = {
-      "fee": poolFee,
-      "index": _routeIndex,
-      "name": routeName
-    }
-    sourceSplitRouteData.push(sourceOneRouteData);
-    sourceSplitRouteAmount.push(amountWithFee);
-
-    totalAmount = amountWithFee;
-    
-    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
-  },
-
-  transferSourceSplitRoute(routeIndexs, volumes, amountOut) {
-    const sourceSplitRouteData = [];
-    const sourceSplitRouteAmount = [];
-
-    const _amountOut = amountOut.toString();
-
-    for (i = 0; i < routeIndexs.length; i++) {
-      if (volumes[i] > 0) {
-        let _routeIndex = routeIndexs[i].toNumber();
-        let routeName = ROUTING_NAME[_routeIndex];
-
-        poolFee = (_amountOut * DEX[_routeIndex]["fee"]) / 100;
-        amountWithFee = ((_amountOut * volumes[i].toString()) / 100) - poolFee;
-        sourceSplitRouteAmount.push(amountWithFee);
-
-        sourceSplitRouteData.push({
-          "fee": poolFee,
-          "index": _routeIndex,
-          "name": routeName,
-        });
-      }
-    }
-    
-    totalAmount = sourceSplitRouteAmount.reduce((a, b) => a + b, 0);
-    
-    return [sourceSplitRouteData, sourceSplitRouteAmount, totalAmount]
+    return wallet;
+  } catch (error) {
+    return error;
   }
 }
 
-module.exports = { ...methods }
+const getServiceFee = (amount) => {
+  return new Decimal(amount).mul(SWAP_FEE).div(100);
+}
+
+const getPoolFee = (routeIndex, amount) => {
+  const dexFee = DEX[routeIndex]["fee"];
+
+  return new Decimal(amount).mul(dexFee).div(100);
+}
+
+const getAmountByVloume = (volume, amount) => {
+  return new Decimal(amount).mul(volume).div(100).toFixed();
+}
+
+const getAmountWithOutFee = (fee, amount) => {
+  return new Decimal(amount).sub(fee).toFixed();
+}
+
+const calAmountWithRoundUp = async (amount) => {
+  const mod = new Decimal(amount).mod(1);
+  const amountWithRoundup = new Decimal(amount).sub(mod).toFixed();
+
+  return amountWithRoundup;
+}
+
+const transferSourceOneRoute = async (routeIndex, amountOut) => {
+  const oneRouteData = [];
+  const oneRouteAmountOut = [];
+
+  const indexRoute = routeIndex.toNumber();
+  const _amountOut = amountOut.toString();
+
+  const poolFee = getPoolFee(indexRoute, _amountOut);
+  const totalAmount = getAmountWithOutFee(poolFee, _amountOut);
+
+  oneRouteAmountOut.push(totalAmount);
+  oneRouteData.push({
+    "fee": poolFee,
+    "index": indexRoute,
+    "name": ROUTING_NAME[indexRoute]
+  });
+
+  return { oneRouteData, oneRouteAmountOut, totalAmount }
+}
+
+const transferSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
+  let totalAmount = 0;
+  let splitRouteData = [];
+  let splitRouteAmountOut = [];
+
+  for (i = 0; i < routeIndexs.length; i++) {
+    // Prevent operation error by 0 value
+    if (volumes[i] > 0) {
+      const indexRoute = routeIndexs[i].toNumber();
+
+      // Convert bignumber to string for decimal operation
+      const _amountOut = amountOut.toString();
+      const _volume = volumes[i].toString();
+      
+      const poolFee = getPoolFee(indexRoute, _amountOut);
+      const amountByVolume = getAmountByVloume(_volume, _amountOut);
+      const amountWithoutFee = getAmountWithOutFee(poolFee, amountByVolume);
+      
+      splitRouteAmountOut.push(amountWithoutFee);
+      
+      // Update total amount to find Net amount
+      totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
+      
+      splitRouteData.push({
+        "fee": poolFee,
+        "index": indexRoute,
+        "name": ROUTING_NAME[indexRoute]
+      });
+    }
+  }
+
+  return { splitRouteData, splitRouteAmountOut, totalAmount }
+}
+
+const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
+  // prepare contract
+  const contractConfig = ROUTING_CONTRACTS[chainId];
+  const signer = await signedWallet(chainId);
+  const queryContract = new ethers.Contract(
+    contractConfig.AddressBestRouteQuery,
+    contractConfig.ABIBestRouteQuery,
+    signer
+  );
+
+  const [oneRoute, splitRoutes] = await Promise.all([
+    queryContract.oneRoute(sourceToken, destinationToken, amount, ROUTES),
+    queryContract.splitTwoRoutes(sourceToken, destinationToken, amount, ROUTES, DISTRIBUTION_PERCENT)
+  ])
+
+  const oneRouteResult = await transferSourceOneRoute(
+    oneRoute.routeIndex,
+    oneRoute.amountOut
+  );
+  const splitRouteResult = await transferSourceSplitRoute(
+    splitRoutes.routeIndexs,
+    splitRoutes.volumns,
+    splitRoutes.amountOut
+  );
+
+  return { oneRouteResult, splitRouteResult };
+}
+
+module.exports = {
+  signedWallet,
+  getSwapRate,
+  transferSourceOneRoute,
+  transferSourceSplitRoute,
+  calAmountWithRoundUp,
+  getServiceFee
+}
