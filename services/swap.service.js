@@ -2,7 +2,6 @@ const ethers = require("ethers");
 const Decimal = require('decimal.js');
 const {
   SWAP_FEE,
-  ROUTING_NAME,
   DEX,
   ROUTING_CONTRACTS,
   ROUTES,
@@ -64,7 +63,7 @@ const transformSourceOneRoute = async (routeIndex, amountOut) => {
   oneRouteData.push({
     "fee": poolFeeWithRoundUp,
     "index": indexRoute,
-    "name": ROUTING_NAME[indexRoute]
+    "name": DEX[indexRoute]["name"]
   });
 
   return { oneRouteData, oneRouteAmountOut, totalAmount }
@@ -99,7 +98,7 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
-        "name": ROUTING_NAME[indexRoute]
+        "name": DEX[indexRoute]["name"]
       });
     }
   }
