@@ -84,9 +84,11 @@ app.get("/cross-rate", async (req, res) => {
 
   data["fee"] = weiServiceFee.toString();
 
-  if (oneRouteResult.totalAmount < splitRouteResult.totalAmount &&
-    splitRouteResult.splitRouteData.length >= 2) {
+  // Is amount out from split route more than one route
+  const isLessthanOneRoute = new Decimal(oneRouteResult.totalAmount
+    ).lessThan(splitRouteResult.totalAmount);
 
+  if (isLessthanOneRoute && splitRouteResult.splitRouteData.length >= 2) {
     totalAmountOut = splitRouteResult.totalAmount;
 
     data["source"] = {
@@ -109,14 +111,14 @@ app.get("/cross-rate", async (req, res) => {
   // DESTINATION: Query pair of stableToken - tokenOut
   const desConfig = ROUTING_CONTRACTS[destinationChainId];
 
-  const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
+  // const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
 
   // Need to pass BigNumber
   const { 
     oneRouteResult: desOneRouteResult,
     splitRouteResult: desSplitRouteResult 
   } = await getSwapRate(
-    destinationChainId, amountWithRoundup, desConfig.StableToken, tokenOut);
+    destinationChainId, totalAmountOut, desConfig.StableToken, tokenOut);
 
   if (desOneRouteResult.totalAmount < desSplitRouteResult.totalAmount) {
     data["destination"] = {

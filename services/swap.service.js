@@ -44,10 +44,13 @@ const getAmountWithOutFee = (fee, amount) => {
 }
 
 const calAmountWithRoundUp = async (amount) => {
-  const mod = new Decimal(amount).mod(1);
-  const amountWithRoundup = new Decimal(amount).sub(mod).toFixed();
+  Decimal.rounding = Decimal.ROUND_UP;
+  return new Decimal(amount).round().toFixed();
+}
 
-  return amountWithRoundup;
+const calAmountWithRoundDown = async (amount) => {
+  Decimal.rounding = Decimal.ROUND_DOWN;
+  return new Decimal(amount).round().toFixed();
 }
 
 const transformSourceOneRoute = async (routeIndex, amountOut) => {
@@ -58,11 +61,14 @@ const transformSourceOneRoute = async (routeIndex, amountOut) => {
   const _amountOut = amountOut.toString();
 
   const poolFee = getPoolFee(indexRoute, _amountOut);
-  const totalAmount = getAmountWithOutFee(poolFee, _amountOut);
+  const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
+
+  const amountWithOutFee = getAmountWithOutFee(poolFee, _amountOut);
+  const totalAmount = await calAmountWithRoundDown(amountWithOutFee);
 
   oneRouteAmountOut.push(totalAmount);
   oneRouteData.push({
-    "fee": poolFee,
+    "fee": poolFeeWithRoundUp,
     "index": indexRoute,
     "name": ROUTING_NAME[indexRoute]
   });
@@ -85,16 +91,19 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
       const _volume = volumes[i].toString();
       
       const poolFee = getPoolFee(indexRoute, _amountOut);
+      const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
+
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
       const amountWithoutFee = getAmountWithOutFee(poolFee, amountByVolume);
+      const amountWithRoundDown = await calAmountWithRoundDown(amountWithoutFee);
       
-      splitRouteAmountOut.push(amountWithoutFee);
+      splitRouteAmountOut.push(amountWithRoundDown);
       
       // Update total amount to find Net amount
-      totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
+      totalAmount = new Decimal(totalAmount).add(amountWithRoundDown).toFixed();
       
       splitRouteData.push({
-        "fee": poolFee,
+        "fee": poolFeeWithRoundUp,
         "index": indexRoute,
         "name": ROUTING_NAME[indexRoute]
       });
@@ -138,5 +147,6 @@ module.exports = {
   transformSourceOneRoute,
   transformSourceSplitRoute,
   calAmountWithRoundUp,
+  calAmountWithRoundDown,
   getServiceFee
 }
