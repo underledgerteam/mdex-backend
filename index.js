@@ -10,7 +10,7 @@ require("./services/cron-jobs");
 require('./configs/express')(app)
 
 const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
-const { getSwapRate, calAmountWithRoundUp, getServiceFee } = require("./services/swap.service");
+const { getSwapRate, getServiceFee } = require("./services/swap.service");
 
 let port = process.env.PORT || 9000;
 
