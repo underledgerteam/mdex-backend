@@ -48,11 +48,6 @@ const calAmountWithRoundUp = (amount) => {
   return new Decimal(amount).round().toFixed();
 }
 
-const calAmountWithRoundDown = (amount) => {
-  Decimal.rounding = Decimal.ROUND_DOWN;
-  return new Decimal(amount).round().toFixed();
-}
-
 const transformSourceOneRoute = async (routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
@@ -146,6 +141,5 @@ module.exports = {
   transformSourceOneRoute,
   transformSourceSplitRoute,
   calAmountWithRoundUp,
-  calAmountWithRoundDown,
   getServiceFee
 }
