@@ -15,10 +15,8 @@ const { getSwapRate, calAmountWithRoundUp, getServiceFee } = require("./services
 let port = process.env.PORT || 9000;
 
 app.get("/rate", async (req, res) => {
-  const tokenIn = req.query.tokenIn;
-  const tokenOut = req.query.tokenOut;
-  const amountIn = req.query.amount;
-  const chainId = req.query.chainId;
+  // Define request query
+  const { tokenIn, tokenOut, amount: amountIn, chainId } = req.query;
 
   const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
   const serviceFee = getServiceFee(ethAmountIn);
@@ -57,11 +55,7 @@ app.get("/rate", async (req, res) => {
 
 app.get("/cross-rate", async (req, res) => {
   // Define request query
-  const tokenIn = req.query.tokenIn;
-  const tokenOut = req.query.tokenOut;
-  const amountIn = req.query.amount;
-  const sourceChainId = req.query.sourceChainId;
-  const destinationChainId = req.query.destinationChainId;
+  const { tokenIn, tokenOut, amount: amountIn, sourceChainId, destinationChainId } = req.query;
 
   // SOURCE: Query pair of tokenIn - stableToken
   const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
