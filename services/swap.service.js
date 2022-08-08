@@ -43,12 +43,12 @@ const getAmountWithOutFee = (fee, amount) => {
   return new Decimal(amount).sub(fee).toFixed();
 }
 
-const calAmountWithRoundUp = async (amount) => {
+const calAmountWithRoundUp = (amount) => {
   Decimal.rounding = Decimal.ROUND_UP;
   return new Decimal(amount).round().toFixed();
 }
 
-const calAmountWithRoundDown = async (amount) => {
+const calAmountWithRoundDown = (amount) => {
   Decimal.rounding = Decimal.ROUND_DOWN;
   return new Decimal(amount).round().toFixed();
 }
@@ -63,8 +63,7 @@ const transformSourceOneRoute = async (routeIndex, amountOut) => {
   const poolFee = getPoolFee(indexRoute, _amountOut);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
-  const amountWithOutFee = getAmountWithOutFee(poolFee, _amountOut);
-  const totalAmount = await calAmountWithRoundDown(amountWithOutFee);
+  const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
 
   oneRouteAmountOut.push(totalAmount);
   oneRouteData.push({
@@ -91,16 +90,16 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
       const _volume = volumes[i].toString();
       
       const poolFee = getPoolFee(indexRoute, _amountOut);
-      const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
+      const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
-      const amountWithoutFee = getAmountWithOutFee(poolFee, amountByVolume);
-      const amountWithRoundDown = await calAmountWithRoundDown(amountWithoutFee);
+      const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
+      // const amountWithRoundDown = calAmountWithRoundDown(amountWithoutFee);
       
-      splitRouteAmountOut.push(amountWithRoundDown);
+      splitRouteAmountOut.push(amountWithoutFee);
       
       // Update total amount to find Net amount
-      totalAmount = new Decimal(totalAmount).add(amountWithRoundDown).toFixed();
+      totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
       
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
