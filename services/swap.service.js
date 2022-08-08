@@ -50,7 +50,7 @@ const calAmountWithRoundUp = async (amount) => {
   return amountWithRoundup;
 }
 
-const transferSourceOneRoute = async (routeIndex, amountOut) => {
+const transformSourceOneRoute = async (routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
 
@@ -70,7 +70,7 @@ const transferSourceOneRoute = async (routeIndex, amountOut) => {
   return { oneRouteData, oneRouteAmountOut, totalAmount }
 }
 
-const transferSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
+const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
   let totalAmount = 0;
   let splitRouteData = [];
   let splitRouteAmountOut = [];
@@ -119,11 +119,11 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
     queryContract.splitTwoRoutes(sourceToken, destinationToken, amount, ROUTES, DISTRIBUTION_PERCENT)
   ])
 
-  const oneRouteResult = await transferSourceOneRoute(
+  const oneRouteResult = await transformSourceOneRoute(
     oneRoute.routeIndex,
     oneRoute.amountOut
   );
-  const splitRouteResult = await transferSourceSplitRoute(
+  const splitRouteResult = await transformSourceSplitRoute(
     splitRoutes.routeIndexs,
     splitRoutes.volumns,
     splitRoutes.amountOut
@@ -135,8 +135,8 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
 module.exports = {
   signedWallet,
   getSwapRate,
-  transferSourceOneRoute,
-  transferSourceSplitRoute,
+  transformSourceOneRoute,
+  transformSourceSplitRoute,
   calAmountWithRoundUp,
   getServiceFee
 }
