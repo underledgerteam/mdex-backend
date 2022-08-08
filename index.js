@@ -112,11 +112,11 @@ app.get("/cross-rate", async (req, res) => {
   const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
 
   // Need to pass BigNumber
-  const swapResult = await getSwapRate(   // !!! Need review code here !!!!
+  const { 
+    oneRouteResult: desOneRouteResult,
+    splitRouteResult: desSplitRouteResult 
+  } = await getSwapRate(
     destinationChainId, amountWithRoundup, desConfig.StableToken, tokenOut);
-
-  const desOneRouteResult = swapResult.oneRouteResult;
-  const desSplitRouteResult = swapResult.splitRouteResult;
 
   if (desOneRouteResult.totalAmount < desSplitRouteResult.totalAmount) {
     data["destination"] = {
