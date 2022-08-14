@@ -11,10 +11,12 @@ require('./configs/express')(app)
 
 const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
 const { getSwapRate, getServiceFee } = require("./services/swap.service");
+const { validateSchema } = require("./middleware/validate-schema");
+const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.schema")
 
 let port = process.env.PORT || 9000;
 
-app.get("/rate", async (req, res) => {
+app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
   // Define request query
   const { tokenIn, tokenOut, amount: amountIn, chainId } = req.query;
 
@@ -53,7 +55,7 @@ app.get("/rate", async (req, res) => {
 });
 
 
-app.get("/cross-rate", async (req, res) => {
+app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) => {
   // Define request query
   const { tokenIn, tokenOut, amount: amountIn, sourceChainId, destinationChainId } = req.query;
 
