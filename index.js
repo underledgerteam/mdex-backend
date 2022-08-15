@@ -18,8 +18,6 @@ let port = process.env.PORT || 9000;
 
 app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
   try {
-
-    // Define request query
     const { tokenIn, tokenOut, amount: amountIn, chainId } = req.query;
 
     const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
@@ -35,10 +33,8 @@ app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
     const { oneRouteResult, splitRouteResult } = await getSwapRate(
       chainId, weiAmountIn, tokenIn, tokenOut);
 
-    // Prepare return data
     let data = {};
 
-    // Define service fee
     data["fee"] = weiServiceFee.toString();
 
     if (oneRouteResult.totalAmount < splitRouteResult.totalAmount &&
@@ -61,7 +57,6 @@ app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
 
 app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) => {
   try {
-    // Define request query
     const { tokenIn, tokenOut, amount: amountIn, sourceChainId, destinationChainId } = req.query;
 
     // SOURCE: Query pair of tokenIn - stableToken
@@ -112,9 +107,6 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
     // DESTINATION: Query pair of stableToken - tokenOut
     const desConfig = ROUTING_CONTRACTS[destinationChainId];
 
-    // const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
-
-    // Need to pass BigNumber
     const {
       oneRouteResult: desOneRouteResult,
       splitRouteResult: desSplitRouteResult

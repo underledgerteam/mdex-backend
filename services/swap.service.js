@@ -82,19 +82,18 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
       const _volume = volumes[i].toString();
-      
+
       const poolFee = getPoolFee(indexRoute, _amountOut);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
       const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
-      // const amountWithRoundDown = calAmountWithRoundDown(amountWithoutFee);
-      
+
       splitRouteAmountOut.push(amountWithoutFee);
-      
+
       // Update total amount to find Net amount
       totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
-      
+
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
@@ -107,7 +106,6 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
 }
 
 const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
-  // prepare contract
   const contractConfig = ROUTING_CONTRACTS[chainId];
   const signer = await signedWallet(chainId);
   const queryContract = new ethers.Contract(
