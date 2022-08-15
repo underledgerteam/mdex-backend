@@ -47,6 +47,11 @@ const calAmountWithRoundUp = (amount) => {
   return new Decimal(amount).round().toFixed();
 }
 
+const validateAmoutOut = (amount) => {
+  if (amount <= 0) return false
+  else return true
+}
+
 const transformSourceOneRoute = async (routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
@@ -138,5 +143,6 @@ module.exports = {
   transformSourceOneRoute,
   transformSourceSplitRoute,
   calAmountWithRoundUp,
-  getServiceFee
+  getServiceFee,
+  validateAmoutOut
 }

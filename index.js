@@ -10,8 +10,8 @@ require("./services/cron-jobs.service");
 require('./configs/express')(app)
 
 const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
-const { getSwapRate, getServiceFee } = require("./services/swap.service");
-const { validateSchema } = require("./middleware/validate-schema");
+const { getSwapRate, getServiceFee, validateAmoutOut } = require("./services/swap.service");
+const { validateSchema } = require("./middleware/validateSchema");
 const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.schema")
 
 let port = process.env.PORT || 9000;
@@ -48,9 +48,16 @@ app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
       data["isSplitSwap"] = false
       data["route"] = oneRouteResult.oneRouteData
     }
-    res.send(data)
+
+    const isAmountOutValid = validateAmoutOut(data["amount"]);
+    if (!isAmountOutValid) {
+      return res.error("SWAP001");
+    }
+
+    res.success(data)
   } catch (err) {
-    res.status(400).send(err);
+    console.log(err);
+    res.error(err.code, err.message);
   }
 });
 
@@ -129,9 +136,10 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
       }
     }
 
-    res.send(data);
+    res.success(data)
   } catch (err) {
-    res.status(400).send(err);
+    console.log(err);
+    res.error(err.code, err.message);
   }
 });
 
