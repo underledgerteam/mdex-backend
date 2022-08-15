@@ -4,7 +4,7 @@ const Decimal = require('decimal.js');
 const app = express();
 
 // Cron job
-require("./services/cron-jobs");
+require("./services/cron-jobs.service");
 
 // Express Configs
 require('./configs/express')(app)
