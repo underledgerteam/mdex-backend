@@ -17,122 +17,130 @@ const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.sche
 let port = process.env.PORT || 9000;
 
 app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
-  // Define request query
-  const { tokenIn, tokenOut, amount: amountIn, chainId } = req.query;
+  try {
 
-  const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
-  const serviceFee = getServiceFee(ethAmountIn);
-  const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
+    // Define request query
+    const { tokenIn, tokenOut, amount: amountIn, chainId } = req.query;
 
-  const weiServiceFee = ethers.utils.parseUnits(
-    new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
+    const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
+    const serviceFee = getServiceFee(ethAmountIn);
+    const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
 
-  const weiAmountIn = ethers.utils.parseUnits(
-    new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
+    const weiServiceFee = ethers.utils.parseUnits(
+      new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
 
-  const { oneRouteResult, splitRouteResult } = await getSwapRate(
-    chainId, weiAmountIn, tokenIn, tokenOut);
+    const weiAmountIn = ethers.utils.parseUnits(
+      new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
 
-  // Prepare return data
-  let data = {};
+    const { oneRouteResult, splitRouteResult } = await getSwapRate(
+      chainId, weiAmountIn, tokenIn, tokenOut);
 
-  // Define service fee
-  data["fee"] = weiServiceFee.toString();
+    // Prepare return data
+    let data = {};
 
-  if (oneRouteResult.totalAmount < splitRouteResult.totalAmount &&
-    splitRouteResult.splitRouteData.length >= 2) {
+    // Define service fee
+    data["fee"] = weiServiceFee.toString();
 
-    data["amount"] = splitRouteResult.splitRouteAmountOut
-    data["isSplitSwap"] = true
-    data["route"] = splitRouteResult.splitRouteData
-  } else {
-    data["amount"] = oneRouteResult.oneRouteAmountOut
-    data["isSplitSwap"] = false
-    data["route"] = oneRouteResult.oneRouteData
+    if (oneRouteResult.totalAmount < splitRouteResult.totalAmount &&
+      splitRouteResult.splitRouteData.length >= 2) {
+
+      data["amount"] = splitRouteResult.splitRouteAmountOut
+      data["isSplitSwap"] = true
+      data["route"] = splitRouteResult.splitRouteData
+    } else {
+      data["amount"] = oneRouteResult.oneRouteAmountOut
+      data["isSplitSwap"] = false
+      data["route"] = oneRouteResult.oneRouteData
+    }
+    res.send(data)
+  } catch (err) {
+    res.status(400).send(err);
   }
-
-  res.send(data)
 });
 
 
 app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) => {
-  // Define request query
-  const { tokenIn, tokenOut, amount: amountIn, sourceChainId, destinationChainId } = req.query;
+  try {
+    // Define request query
+    const { tokenIn, tokenOut, amount: amountIn, sourceChainId, destinationChainId } = req.query;
 
-  // SOURCE: Query pair of tokenIn - stableToken
-  const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
-  const serviceFee = getServiceFee(ethAmountIn);
-  const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
+    // SOURCE: Query pair of tokenIn - stableToken
+    const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
+    const serviceFee = getServiceFee(ethAmountIn);
+    const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
 
-  const weiServiceFee = ethers.utils.parseUnits(
-    new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
+    const weiServiceFee = ethers.utils.parseUnits(
+      new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
 
-  const weiAmountIn = ethers.utils.parseUnits(
-    new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
+    const weiAmountIn = ethers.utils.parseUnits(
+      new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
 
-  const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
+    const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
 
-  const { oneRouteResult, splitRouteResult } = await getSwapRate(
-    sourceChainId, weiAmountIn, tokenIn, sourceConfig.StableToken);
+    const { oneRouteResult, splitRouteResult } = await getSwapRate(
+      sourceChainId, weiAmountIn, tokenIn, sourceConfig.StableToken);
 
-  let totalAmountOut = 0;
-  let data = {};
+    let totalAmountOut = 0;
+    let data = {};
 
-  data["fee"] = weiServiceFee.toString();
+    data["fee"] = weiServiceFee.toString();
 
-  // Is amount out from split route more than one route
-  const isLessthanOneRoute = new Decimal(oneRouteResult.totalAmount
+    // Is amount out from split route more than one route
+    const isLessthanOneRoute = new Decimal(oneRouteResult.totalAmount
     ).lessThan(splitRouteResult.totalAmount);
 
-  if (isLessthanOneRoute && splitRouteResult.splitRouteData.length >= 2) {
-    totalAmountOut = splitRouteResult.totalAmount;
+    if (isLessthanOneRoute && splitRouteResult.splitRouteData.length >= 2) {
+      totalAmountOut = splitRouteResult.totalAmount;
 
-    data["source"] = {
-      "amount": splitRouteResult.splitRouteAmountOut,
-      "chainId": sourceChainId,
-      "isSplitSwap": true,
-      "route": splitRouteResult.splitRouteData
-    }
-  } else {
-    totalAmountOut = oneRouteResult.totalAmount;
+      data["source"] = {
+        "amount": splitRouteResult.splitRouteAmountOut,
+        "chainId": sourceChainId,
+        "isSplitSwap": true,
+        "route": splitRouteResult.splitRouteData
+      }
+    } else {
+      totalAmountOut = oneRouteResult.totalAmount;
 
-    data["source"] = {
-      "amount": oneRouteResult.oneRouteAmountOut,
-      "chainId": sourceChainId,
-      "isSplitSwap": false,
-      "route": oneRouteResult.oneRouteData
+      data["source"] = {
+        "amount": oneRouteResult.oneRouteAmountOut,
+        "chainId": sourceChainId,
+        "isSplitSwap": false,
+        "route": oneRouteResult.oneRouteData
+      }
     }
+
+    // DESTINATION: Query pair of stableToken - tokenOut
+    const desConfig = ROUTING_CONTRACTS[destinationChainId];
+
+    // const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
+
+    // Need to pass BigNumber
+    const {
+      oneRouteResult: desOneRouteResult,
+      splitRouteResult: desSplitRouteResult
+    } = await getSwapRate(
+      destinationChainId, totalAmountOut, desConfig.StableToken, tokenOut);
+
+    if (desOneRouteResult.totalAmount < desSplitRouteResult.totalAmount) {
+      data["destination"] = {
+        "amount": desSplitRouteResult.splitRouteAmountOut,
+        "chainId": destinationChainId,
+        "isSplitSwap": true,
+        "route": desSplitRouteResult.splitRouteData
+      }
+    } else {
+      data["destination"] = {
+        "amount": desOneRouteResult.oneRouteAmountOut,
+        "chainId": destinationChainId,
+        "isSplitSwap": false,
+        "route": desOneRouteResult.oneRouteData
+      }
+    }
+
+    res.send(data);
+  } catch (err) {
+    res.status(400).send(err);
   }
-
-  // DESTINATION: Query pair of stableToken - tokenOut
-  const desConfig = ROUTING_CONTRACTS[destinationChainId];
-
-  // const amountWithRoundup = await calAmountWithRoundUp(totalAmountOut);
-
-  // Need to pass BigNumber
-  const { 
-    oneRouteResult: desOneRouteResult,
-    splitRouteResult: desSplitRouteResult 
-  } = await getSwapRate(
-    destinationChainId, totalAmountOut, desConfig.StableToken, tokenOut);
-
-  if (desOneRouteResult.totalAmount < desSplitRouteResult.totalAmount) {
-    data["destination"] = {
-      "amount": desSplitRouteResult.splitRouteAmountOut,
-      "chainId": destinationChainId,
-      "isSplitSwap": true,
-      "route": desSplitRouteResult.splitRouteData
-    }
-  } else {
-    data["destination"] = {
-      "amount": desOneRouteResult.oneRouteAmountOut,
-      "chainId": destinationChainId,
-      "isSplitSwap": false,
-      "route": desOneRouteResult.oneRouteData
-    }
-  }
-
-  res.send(data);
 });
 
 
