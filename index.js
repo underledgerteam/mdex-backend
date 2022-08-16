@@ -111,6 +111,11 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
       }
     }
 
+    const isAmountOutValid = validateAmoutOut(data["source"]["amount"]);
+    if (!isAmountOutValid) {
+      return res.error("SWAP001");
+    }
+
     // DESTINATION: Query pair of stableToken - tokenOut
     const desConfig = ROUTING_CONTRACTS[destinationChainId];
 
