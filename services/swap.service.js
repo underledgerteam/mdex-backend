@@ -2,9 +2,7 @@ const ethers = require("ethers");
 const Decimal = require('decimal.js');
 const {
   SWAP_FEE,
-  DEX,
   ROUTING_CONTRACTS,
-  ROUTES,
   DISTRIBUTION_PERCENT
 } = require("../utils/constants");
 
@@ -28,10 +26,8 @@ const getServiceFee = (amount) => {
   return new Decimal(amount).mul(SWAP_FEE).div(100);
 }
 
-const getPoolFee = (routeIndex, amount) => {
-  const dexFee = DEX[routeIndex]["fee"];
-
-  return new Decimal(amount).mul(dexFee).div(100);
+const getPoolFee = (fee, amount) => {
+  return new Decimal(amount).mul(fee).div(100);
 }
 
 const getAmountByVloume = (volume, amount) => {
@@ -47,14 +43,18 @@ const calAmountWithRoundUp = (amount) => {
   return new Decimal(amount).round().toFixed();
 }
 
-const transformSourceOneRoute = async (routeIndex, amountOut) => {
+const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
 
   const indexRoute = routeIndex.toNumber();
   const _amountOut = amountOut.toString();
 
-  const poolFee = getPoolFee(indexRoute, _amountOut);
+  const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][indexRoute];
+  const dexRouteFee = dexRouteConfig["fee"];
+  const dexRouteName = dexRouteConfig["name"];
+
+  const poolFee = getPoolFee(dexRouteFee, _amountOut);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
   const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
@@ -63,13 +63,13 @@ const transformSourceOneRoute = async (routeIndex, amountOut) => {
   oneRouteData.push({
     "fee": poolFeeWithRoundUp,
     "index": indexRoute,
-    "name": DEX[indexRoute]["name"]
+    "name": dexRouteName
   });
 
   return { oneRouteData, oneRouteAmountOut, totalAmount }
 }
 
-const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
+const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOut) => {
   let totalAmount = 0;
   let splitRouteData = [];
   let splitRouteAmountOut = [];
@@ -78,17 +78,20 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
     // Prevent operation error by 0 value
     if (volumes[i] > 0) {
       const indexRoute = routeIndexs[i].toNumber();
+      
+      const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][indexRoute];
+      const dexRouteFee = dexRouteConfig["fee"];
+      const dexRouteName = dexRouteConfig["name"];
 
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
       const _volume = volumes[i].toString();
       
-      const poolFee = getPoolFee(indexRoute, _amountOut);
+      const poolFee = getPoolFee(dexRouteFee, _amountOut);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
       const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
-      // const amountWithRoundDown = calAmountWithRoundDown(amountWithoutFee);
       
       splitRouteAmountOut.push(amountWithoutFee);
       
@@ -98,7 +101,7 @@ const transformSourceSplitRoute = async (routeIndexs, volumes, amountOut) => {
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
-        "name": DEX[indexRoute]["name"]
+        "name": dexRouteName
       });
     }
   }
@@ -116,16 +119,21 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
     signer
   );
 
+  const swapRoutes = Object.keys(contractConfig["DexConfig"]);
+  
   const [oneRoute, splitRoutes] = await Promise.all([
-    queryContract.oneRoute(sourceToken, destinationToken, amount, ROUTES),
-    queryContract.splitTwoRoutes(sourceToken, destinationToken, amount, ROUTES, DISTRIBUTION_PERCENT)
+    queryContract.oneRoute(sourceToken, destinationToken, amount, swapRoutes),
+    queryContract.splitTwoRoutes(
+      sourceToken, destinationToken, amount, swapRoutes, DISTRIBUTION_PERCENT)
   ])
 
   const oneRouteResult = await transformSourceOneRoute(
+    chainId,
     oneRoute.routeIndex,
     oneRoute.amountOut
   );
   const splitRouteResult = await transformSourceSplitRoute(
+    chainId,
     splitRoutes.routeIndexs,
     splitRoutes.volumns,
     splitRoutes.amountOut
