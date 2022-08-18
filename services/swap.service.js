@@ -43,6 +43,19 @@ const calAmountWithRoundUp = (amount) => {
   return new Decimal(amount).round().toFixed();
 }
 
+const getDexConfigByRouteIndex = (chainId, routeIndex) => {
+  try {
+    const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][routeIndex];
+
+    const dexFee = dexRouteConfig["fee"];
+    const dexName = dexRouteConfig["name"];
+
+    return { dexFee, dexName }
+  } catch (error) {
+    return error;
+  }
+}
+
 const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
@@ -50,11 +63,9 @@ const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   const indexRoute = routeIndex.toNumber();
   const _amountOut = amountOut.toString();
 
-  const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][indexRoute];
-  const dexRouteFee = dexRouteConfig["fee"];
-  const dexRouteName = dexRouteConfig["name"];
+  const dexConfig = getDexConfigByRouteIndex(chainId, indexRoute);
 
-  const poolFee = getPoolFee(dexRouteFee, _amountOut);
+  const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
   const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
@@ -63,7 +74,7 @@ const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   oneRouteData.push({
     "fee": poolFeeWithRoundUp,
     "index": indexRoute,
-    "name": dexRouteName
+    "name": dexConfig.dexName
   });
 
   return { oneRouteData, oneRouteAmountOut, totalAmount }
@@ -79,15 +90,13 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOu
     if (volumes[i] > 0) {
       const indexRoute = routeIndexs[i].toNumber();
       
-      const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][indexRoute];
-      const dexRouteFee = dexRouteConfig["fee"];
-      const dexRouteName = dexRouteConfig["name"];
+      const dexConfig = getDexConfigByRouteIndex(chainId, indexRoute);
 
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
       const _volume = volumes[i].toString();
       
-      const poolFee = getPoolFee(dexRouteFee, _amountOut);
+      const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
@@ -101,7 +110,7 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOu
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
-        "name": dexRouteName
+        "name": dexConfig.dexName
       });
     }
   }
@@ -120,7 +129,7 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
   );
 
   const swapRoutes = Object.keys(contractConfig["DexConfig"]);
-  
+
   const [oneRoute, splitRoutes] = await Promise.all([
     queryContract.oneRoute(sourceToken, destinationToken, amount, swapRoutes),
     queryContract.splitTwoRoutes(
