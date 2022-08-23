@@ -43,6 +43,12 @@ const calAmountWithRoundUp = (amount) => {
   return new Decimal(amount).round().toFixed();
 }
 
+
+const validateAmoutOut = (amount) => {
+  if (amount <= 0) return false
+  else return true
+}
+
 const getDexConfigByRouteIndex = (chainId, routeIndex) => {
   try {
     const dexRouteConfig = ROUTING_CONTRACTS[chainId]["DexConfig"][routeIndex];
@@ -95,18 +101,18 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOu
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
       const _volume = volumes[i].toString();
-      
+    
       const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
       const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
-      
+
       splitRouteAmountOut.push(amountWithoutFee);
-      
+
       // Update total amount to find Net amount
       totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
-      
+
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
@@ -119,7 +125,6 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOu
 }
 
 const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
-  // prepare contract
   const contractConfig = ROUTING_CONTRACTS[chainId];
   const signer = await signedWallet(chainId);
   const queryContract = new ethers.Contract(
@@ -157,5 +162,6 @@ module.exports = {
   transformSourceOneRoute,
   transformSourceSplitRoute,
   calAmountWithRoundUp,
-  getServiceFee
+  getServiceFee,
+  validateAmoutOut
 }
