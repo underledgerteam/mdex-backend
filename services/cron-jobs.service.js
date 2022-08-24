@@ -8,7 +8,7 @@ require("dotenv").config();
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 //Rinkeby
-cron.schedule("5 * * * * *", async function () {
+cron.schedule("* * * * *", async function () {
   const rinkebyProvider = ethers.getDefaultProvider(
     ethers.providers.getNetwork(4)
   );
@@ -49,7 +49,7 @@ cron.schedule("5 * * * * *", async function () {
 });
 
 //Goerli
-cron.schedule("5 * * * * *", async function () {
+cron.schedule("* * * * *", async function () {
   const goerliProvider = ethers.getDefaultProvider(
     ethers.providers.getNetwork(5)
   );
