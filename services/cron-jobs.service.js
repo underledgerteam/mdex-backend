@@ -63,8 +63,8 @@ cron.schedule("* * * * *", async function () {
   const transactionStateQueue =
     await goerliContract.getTransactionStatusQueue();
 
-  const blockNumber = await rinkebyProvider.getBlockNumber();
-  const blockTimestamp = await rinkebyProvider.getBlock(blockNumber);
+  const blockNumber = await goerliProvider.getBlockNumber();
+  const blockTimestamp = await goerliProvider.getBlock(blockNumber);
 
   if (transactionStateQueue.length > 0) {
     for (let i = 0; i <= transactionStateQueue.length; i++) {
