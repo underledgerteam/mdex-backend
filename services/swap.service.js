@@ -12,8 +12,9 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 const signedWallet = async (chainId) => {
   try {
-    const network = ethers.providers.getNetwork(parseInt(chainId));
-    const provider = ethers.getDefaultProvider(network);
+    const httpProvider = ROUTING_CONTRACTS[chainId]["HttpProvider"];
+    const provider = new ethers.providers.JsonRpcProvider(httpProvider)
+
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
     return wallet;
