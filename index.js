@@ -16,8 +16,9 @@ const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.sche
 
 let port = process.env.PORT || 9000;
 
-app.get("/health-check", (req, res) => {
-  res.success("Connection sucessful.")
+app.head("/health-check", (req, res) => {
+  console.log("Health check connection sucessful.")
+  res.success()
 }); 
 
 app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
