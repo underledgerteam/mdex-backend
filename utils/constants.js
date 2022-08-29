@@ -27,7 +27,19 @@ module.exports = {
       ABIBestRouteQuery: bestRouteQueryABI,
       MultisigWallet: "0x0b88D6D0c00a4399FA73B903E627Ec16e926eC53",
       AddressBestRouteQuery: "0xd19C6F58B9D06C0C3198993Ee9C34C08BA57195e",
-      StableToken: "0x26FE8a8f86511d678d031a022E48FfF41c6a3e3b"
+      StableToken: "0x7ea6eA49B0b0Ae9c5db7907d139D9Cd3439862a1"
     },
+    420: {
+      Lable: "Optimism Goerli Testnet",
+      SwapRoute: [0, 1],
+      DexConfig: {
+        0: { name: "Uniswap", fee: 0.3 },
+        1: { name: "Curve Fi.", fee: 0.04 }
+      },
+      ABIBestRouteQuery: bestRouteQueryABI,
+      MultisigWallet: "0xB2468b3CF340D748774bb0139F835b1cFDA86F40",
+      AddressBestRouteQuery: "0x6E4dF47ac4570789586d4E3dbc9423f3CeD5AC73",
+      StableToken: "0x68Db1c8d85C09d546097C65ec7DCBFF4D6497CbF"
+    }
   },
 };
