@@ -35,15 +35,10 @@ const getAmountByVloume = (volume, amount) => {
   return new Decimal(amount).mul(volume).div(100).toFixed();
 }
 
-const getAmountWithOutFee = (fee, amount) => {
-  return new Decimal(amount).sub(fee).toFixed();
-}
-
 const calAmountWithRoundUp = (amount) => {
   Decimal.rounding = Decimal.ROUND_UP;
   return new Decimal(amount).round().toFixed();
 }
-
 
 const validateAmoutOut = (amount) => {
   if (amount <= 0) return false
@@ -76,7 +71,7 @@ const transformSourceOneRoute = async (chainId, routeIndex, amountIn, amountOut)
   const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
-  const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
+  const totalAmount = _amountOut;
 
   oneRouteAmountOut.push(totalAmount);
   oneRouteData.push({
@@ -109,12 +104,11 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountIn
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
-      const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
 
-      splitRouteAmountOut.push(amountWithoutFee);
+      splitRouteAmountOut.push(amountByVolume);
 
       // Update total amount to find Net amount
-      totalAmount = new Decimal(totalAmount).add(amountWithoutFee).toFixed();
+      totalAmount = new Decimal(totalAmount).add(amountByVolume).toFixed();
 
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
