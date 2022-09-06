@@ -63,16 +63,17 @@ const getDexConfigByRouteIndex = (chainId, routeIndex) => {
   }
 }
 
-const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
+const transformSourceOneRoute = async (chainId, routeIndex, amountIn, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
 
   const indexRoute = routeIndex.toNumber();
   const _amountOut = amountOut.toString();
+  const _amountIn = amountIn.toString();
 
   const dexConfig = getDexConfigByRouteIndex(chainId, indexRoute);
 
-  const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
+  const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
   const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
@@ -87,7 +88,7 @@ const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   return { oneRouteData, oneRouteAmountOut, totalAmount }
 }
 
-const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOut) => {
+const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountIn, amountOut) => {
   let totalAmount = 0;
   let splitRouteData = [];
   let splitRouteAmountOut = [];
@@ -101,9 +102,10 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOu
 
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
+      const _amountIn = amountIn.toString();
       const _volume = volumes[i].toString();
     
-      const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
+      const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
@@ -145,12 +147,14 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
   const oneRouteResult = await transformSourceOneRoute(
     chainId,
     oneRoute.routeIndex,
+    amount,
     oneRoute.amountOut
   );
   const splitRouteResult = await transformSourceSplitRoute(
     chainId,
     splitRoutes.routeIndexs,
     splitRoutes.volumns,
+    amount,
     splitRoutes.amountOut
   );
 
