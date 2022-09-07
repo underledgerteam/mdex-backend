@@ -1,25 +1,26 @@
+const functions = require("firebase-functions");
 const express = require("express");
+const decimal = require('decimal.js');
 const ethers = require("ethers");
-const Decimal = require('decimal.js');
+
+const { validateSchema } = require("./middleware/validateSchema");
+const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
+const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.schema")
+const { getSwapRate, getServiceFee, validateAmoutOut } = require("./services/swap.service");
+
 const app = express();
 
-// Cron job
-require("./services/cron-jobs.service");
+require("./services/cron-jobs.service"); // cronjob
+require('./configs/express')(app);       // express config
 
-// Express Configs
-require('./configs/express')(app)
-
-const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
-const { getSwapRate, getServiceFee, validateAmoutOut } = require("./services/swap.service");
-const { validateSchema } = require("./middleware/validateSchema");
-const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.schema")
-
-let port = process.env.PORT || 9000;
+app.get('/home', (req, res) => {
+  res.success("Hello from express app inside firebase cloud function");
+})
 
 app.head("/health-check", (req, res) => {
   console.log("Health check connection sucessful.")
   res.success()
-}); 
+});
 
 app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
   try {
@@ -27,13 +28,13 @@ app.get("/rate", swapOneChainSchema, validateSchema, async (req, res) => {
 
     const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
     const serviceFee = getServiceFee(ethAmountIn);
-    const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
+    const amountInWithFee = new decimal(ethAmountIn).sub(serviceFee);
 
     const weiServiceFee = ethers.utils.parseUnits(
-      new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
+      new decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
 
     const weiAmountIn = ethers.utils.parseUnits(
-      new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
+      new decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
 
     const { oneRouteResult, splitRouteResult } = await getSwapRate(
       chainId, weiAmountIn, tokenIn, tokenOut);
@@ -74,13 +75,13 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
     // SOURCE: Query pair of tokenIn - stableToken
     const ethAmountIn = ethers.utils.formatEther(amountIn, DECIMALS);
     const serviceFee = getServiceFee(ethAmountIn);
-    const amountInWithFee = new Decimal(ethAmountIn).sub(serviceFee);
+    const amountInWithFee = new decimal(ethAmountIn).sub(serviceFee);
 
     const weiServiceFee = ethers.utils.parseUnits(
-      new Decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
+      new decimal(serviceFee).toFixed(DECIMALS), DECIMALS);
 
     const weiAmountIn = ethers.utils.parseUnits(
-      new Decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
+      new decimal(amountInWithFee).toFixed(DECIMALS), DECIMALS);
 
     const sourceConfig = ROUTING_CONTRACTS[sourceChainId];
 
@@ -92,8 +93,7 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
 
     data["fee"] = weiServiceFee.toString();
 
-    // Is amount out from split route more than one route
-    const isLessthanOneRoute = new Decimal(oneRouteResult.totalAmount
+    const isLessthanOneRoute = new decimal(oneRouteResult.totalAmount
     ).lessThan(splitRouteResult.totalAmount);
 
     if (isLessthanOneRoute && splitRouteResult.splitRouteData.length >= 2) {
@@ -153,7 +153,4 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
   }
 });
 
-
-app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
-})
+exports.app = functions.https.onRequest(app);

@@ -1,0 +1,26 @@
+{
+  "hosting": {
+    "rewrites": [{
+      "source": "/home",
+      "function": "app"
+    },
+    {
+      "source": "/health-check",
+      "function": "app"
+    },
+    {
+      "source": "/rate",
+      "function": "app"
+    },
+    {
+      "source": "/cross-rate",
+      "function": "app"
+    }
+  ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 const ethers = require("ethers");
-const Decimal = require('decimal.js');
+const decimal = require('decimal.js');
 const {
   SWAP_FEE,
   ROUTING_CONTRACTS,
@@ -24,21 +24,26 @@ const signedWallet = async (chainId) => {
 }
 
 const getServiceFee = (amount) => {
-  return new Decimal(amount).mul(SWAP_FEE).div(100);
+  return new decimal(amount).mul(SWAP_FEE).div(100);
 }
 
 const getPoolFee = (fee, amount) => {
-  return new Decimal(amount).mul(fee).div(100);
+  return new decimal(amount).mul(fee).div(100);
 }
 
 const getAmountByVloume = (volume, amount) => {
-  return new Decimal(amount).mul(volume).div(100).toFixed();
+  return new decimal(amount).mul(volume).div(100).toFixed();
+}
+
+const getAmountWithOutFee = (fee, amount) => {
+  return new decimal(amount).sub(fee).toFixed();
 }
 
 const calAmountWithRoundUp = (amount) => {
-  Decimal.rounding = Decimal.ROUND_UP;
-  return new Decimal(amount).round().toFixed();
+  decimal.rounding = decimal.ROUND_UP;
+  return new decimal(amount).round().toFixed();
 }
+
 
 const validateAmoutOut = (amount) => {
   if (amount <= 0) return false
@@ -58,20 +63,19 @@ const getDexConfigByRouteIndex = (chainId, routeIndex) => {
   }
 }
 
-const transformSourceOneRoute = async (chainId, routeIndex, amountIn, amountOut) => {
+const transformSourceOneRoute = async (chainId, routeIndex, amountOut) => {
   const oneRouteData = [];
   const oneRouteAmountOut = [];
 
   const indexRoute = routeIndex.toNumber();
   const _amountOut = amountOut.toString();
-  const _amountIn = amountIn.toString();
 
   const dexConfig = getDexConfigByRouteIndex(chainId, indexRoute);
 
-  const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
+  const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
   const poolFeeWithRoundUp = await calAmountWithRoundUp(poolFee);
 
-  const totalAmount = _amountOut;
+  const totalAmount = getAmountWithOutFee(poolFeeWithRoundUp, _amountOut);
 
   oneRouteAmountOut.push(totalAmount);
   oneRouteData.push({
@@ -83,7 +87,7 @@ const transformSourceOneRoute = async (chainId, routeIndex, amountIn, amountOut)
   return { oneRouteData, oneRouteAmountOut, totalAmount }
 }
 
-const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountIn, amountOut) => {
+const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountOut) => {
   let totalAmount = 0;
   let splitRouteData = [];
   let splitRouteAmountOut = [];
@@ -97,18 +101,18 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountIn
 
       // Convert bignumber to string for decimal operation
       const _amountOut = amountOut.toString();
-      const _amountIn = amountIn.toString();
       const _volume = volumes[i].toString();
     
-      const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
+      const poolFee = getPoolFee(dexConfig.dexFee, _amountOut);
       const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountOut);
+      const amountWithoutFee = getAmountWithOutFee(poolFeeWithRoundUp, amountByVolume);
 
-      splitRouteAmountOut.push(amountByVolume);
+      splitRouteAmountOut.push(amountWithoutFee);
 
       // Update total amount to find Net amount
-      totalAmount = new Decimal(totalAmount).add(amountByVolume).toFixed();
+      totalAmount = new decimal(totalAmount).add(amountWithoutFee).toFixed();
 
       splitRouteData.push({
         "fee": poolFeeWithRoundUp,
@@ -141,14 +145,12 @@ const getSwapRate = async (chainId, amount, sourceToken, destinationToken) => {
   const oneRouteResult = await transformSourceOneRoute(
     chainId,
     oneRoute.routeIndex,
-    amount,
     oneRoute.amountOut
   );
   const splitRouteResult = await transformSourceSplitRoute(
     chainId,
     splitRoutes.routeIndexs,
     splitRoutes.volumns,
-    amount,
     splitRoutes.amountOut
   );
 
