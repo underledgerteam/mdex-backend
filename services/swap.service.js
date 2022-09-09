@@ -31,6 +31,10 @@ const getPoolFee = (fee, amount) => {
   return new Decimal(amount).mul(fee).div(100);
 }
 
+const getConnextSlippage = (amount) => {
+  return new Decimal(amount).div(100).mul(97);
+}
+
 const getAmountByVloume = (volume, amount) => {
   return new Decimal(amount).mul(volume).div(100).toFixed();
 }
@@ -163,5 +167,6 @@ module.exports = {
   transformSourceSplitRoute,
   calAmountWithRoundUp,
   getServiceFee,
-  validateAmoutOut
+  validateAmoutOut,
+  getConnextSlippage
 }

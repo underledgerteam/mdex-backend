@@ -10,7 +10,7 @@ require("./services/cron-jobs.service");
 require('./configs/express')(app)
 
 const { ROUTING_CONTRACTS, DECIMALS } = require("./utils/constants");
-const { getSwapRate, getServiceFee, validateAmoutOut } = require("./services/swap.service");
+const { getSwapRate, getServiceFee, validateAmoutOut, getConnextSlippage } = require("./services/swap.service");
 const { validateSchema } = require("./middleware/validateSchema");
 const { swapOneChainSchema, swapCrossChainSchema } = require("./schema/swap.schema")
 
@@ -121,6 +121,12 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
       return res.error("SWAP001");
     }
 
+    const ethDestAmountIn = ethers.utils.formatEther(totalAmountOut, DECIMALS);
+    const slippage = getConnextSlippage(ethDestAmountIn);
+
+    const weiSlippage = ethers.utils.parseUnits(
+      new Decimal(slippage).toFixed(DECIMALS), DECIMALS);
+
     // DESTINATION: Query pair of stableToken - tokenOut
     const desConfig = ROUTING_CONTRACTS[destinationChainId];
 
@@ -128,7 +134,7 @@ app.get("/cross-rate", swapCrossChainSchema, validateSchema, async (req, res) =>
       oneRouteResult: desOneRouteResult,
       splitRouteResult: desSplitRouteResult
     } = await getSwapRate(
-      destinationChainId, totalAmountOut, desConfig.StableToken, tokenOut);
+      destinationChainId, weiSlippage, desConfig.StableToken, tokenOut);
 
     if (desOneRouteResult.totalAmount < desSplitRouteResult.totalAmount) {
       data["destination"] = {
