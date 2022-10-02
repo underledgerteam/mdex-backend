@@ -103,19 +103,19 @@ const transformSourceSplitRoute = async (chainId, routeIndexs, volumes, amountIn
       const _amountOut = amountOut.toString();
       const _amountIn = amountIn.toString();
       const _volume = volumes[i].toString();
-    
-      const poolFee = getPoolFee(dexConfig.dexFee, _amountIn);
-      const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
 
       const amountByVolume = getAmountByVloume(_volume, _amountIn);
 
+      const poolFee = getPoolFee(dexConfig.dexFee, amountByVolume);
+      const poolFeeWithRoundUp = calAmountWithRoundUp(poolFee);
+
       splitRouteAmountOut.push(amountByVolume);
 
-      // Update total amount to find Net amount
-      // totalAmount = new Decimal(totalAmount).add(amountByVolume).toFixed();
       totalAmount = _amountOut;
 
       splitRouteData.push({
+        "swapAmount": amountByVolume,
+        "volume": _volume,
         "fee": poolFeeWithRoundUp,
         "index": indexRoute,
         "name": dexConfig.dexName
